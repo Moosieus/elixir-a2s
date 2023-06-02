@@ -11,7 +11,7 @@ The package can be installed by adding `a2s` to your list of dependencies in `mi
 ```elixir
 def deps do
   [
-    {:a2s, "~> 0.1.0"}
+    {:a2s, "~> 0.2.0"}
   ]
 end
 ```
