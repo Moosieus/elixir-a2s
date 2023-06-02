@@ -1,11 +1,12 @@
 # A2S
 
+<!-- MDOC !-->
+
 A library for communicating with game servers running [Valve's A2S server query protocol](https://developer.valvesoftware.com/wiki/Server_queries).
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `a2s` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `a2s` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -24,53 +25,53 @@ There's two general ways to use this library:
 
 ### Via `A2S.Client`
 
-This module's intended as an easy to use client that should cover most use-cases. To start, either add `A2S.Client` to your app's supervision tree:
+An easy to use client that should cover most use-cases. Add `A2S.Client` to your app's supervision tree:
 ```Elixir
 children = [
   {A2S.Client, [name: MyA2SCli]}
 ]
 ```
-If you'd like to start the client dynamically or in a REPL: 
+Or start the client dynamically: 
 ```Elixir
 A2S.Client.start_link([name: MyA2SCli])
 ```
 
-Once started, querying a gameserver's as simple as:
+Afterwards querying a game server's as simple as:
 ```Elixir
-A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # address followed by port
+A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by port
 ```
 
 ### Via `A2S`
-This module provides the means form request payloads, solve challenges, and parse responses for the A2S protocol. **It doesn't** handle the networking or handshaking necessary to execute A2S queries.
+This module provides the means form requests, sign challenges, and parse responses for the A2S protocol. You can utilize this module directly in your application for tighter integration, but in turn you'll have to handle the networking or handshaking necessary to execute A2S queries.
 
-If you'd like to roll your own networking you can call this module directly. (Todo: Explain caveats)
+The internals of `A2S.Client` may serve as a good reference in that regard.
 
 ## Unsupported Games and Features
 The features and game servers listed below are unsupported due to disuse and to favor maintainability.
 
-### [Source 2006](https://en.wikipedia.org/wiki/Source_(game_engine)#Source_2006) / "Pre-Orange Box" servers
+#### [Source 2006](https://en.wikipedia.org/wiki/Source_(game_engine)#Source_2006) / "Pre-Orange Box" servers
 Would require supporting compression in multipacket responses. Not only adds code complexity, but would require users to have bzip2 installed.
 
-### Other game servers utilizing multi-packet compression
+#### Other game servers utilizing multi-packet compression
 (see above)
 
-### GoldSrc Servers not using the standard protocol
+#### GoldSrc Servers not using the standard protocol
 Should impact exceedingly few applications as many GoldSrc servers use the current standard anyway.
 
-### [The Ship](https://steamcharts.com/app/2400)
+#### [The Ship](https://steamcharts.com/app/2400)
 Uses proprietary fields only worth supporting out of posterity-sake.
 
-### [A2A_PING](https://developer.valvesoftware.com/wiki/Server_queries#A2A_PING)
+#### [A2A_PING](https://developer.valvesoftware.com/wiki/Server_queries#A2A_PING)
 Considered deprecated by Valve and is unsupported by many if not almost all most engines.
 
-### [A2S_SERVERQUERY_GETCHALLENGE](https://developer.valvesoftware.com/wiki/Server_queries#A2S_SERVERQUERY_GETCHALLENGE)
+#### [A2S_SERVERQUERY_GETCHALLENGE](https://developer.valvesoftware.com/wiki/Server_queries#A2S_SERVERQUERY_GETCHALLENGE)
 Only used by a handful of niche games. Normal challenge flow should work anyway.
 
 ## Issues
 If you'd like to report an issue, please include as much information as possible to reproduce the issue.
 
 ## Debugging
-`A2S.Client` uses Erlang's [gen_statem](https://www.erlang.org/doc/man/gen_statem.html) behavior to function, and therefore requires the following Logger configuration to report exceptions and crashes:
+`A2S.Client` uses Erlang's [gen_statem](https://www.erlang.org/doc/man/gen_statem.html) behavior to function and therefore requires the following `Logger` configuration to report exceptions and crashes:
 
 ```Elixir
 config :logger,
@@ -82,6 +83,8 @@ or in a REPL:
 Logger.configure(handle_otp_reports: true)
 Logger.configure(handle_sasl_reports: true)
 ```
+
+<!-- MDOC !-->
 
 ## (Much) Todo:
 - Make statem timeouts configurable

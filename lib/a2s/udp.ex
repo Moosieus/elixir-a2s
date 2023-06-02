@@ -1,6 +1,6 @@
 defmodule A2S.UDP do
   @moduledoc """
-  GenServer wrapping a UDP socket that sends packets and routes recevied ones to the proper A2S_statem.
+  GenServer wrapper over `:gen_udp`, responsible for sending packets to game-servers and routing received packets to the appropriate `A2S.Statem` process.
   """
 
   use GenServer
@@ -33,7 +33,7 @@ defmodule A2S.UDP do
   end
 
   @doc """
-  Send the given packet to the game server.
+  Send the given `msg` packet to the game server.
   """
   @impl true
   def handle_call({address, packet}, _from, socket) do

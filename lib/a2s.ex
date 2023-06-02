@@ -1,13 +1,16 @@
 defmodule A2S do
-  @moduledoc """
-  A library for communicating with game servers running [Valve's A2S server query protocol](https://developer.valvesoftware.com/wiki/Server_queries).
-  """
+  @external_resource "README.md"
+  @moduledoc "README.md"
+             |> File.read!()
+             |> String.split("<!-- MDOC !-->")
+             |> Enum.fetch!(1)
+
 
   import Bitwise
 
   defmodule Info do
     @moduledoc """
-    Struct representing an [A2S_INFO response](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format)
+    Struct representing an [A2S_INFO](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format) response.
     """
     defstruct [
       :protocol, :name, :map, :folder, :game, :appid, :players, :max_players, :bots, :server_type,
@@ -19,47 +22,76 @@ defmodule A2S do
 
   defmodule Players do
     @moduledoc """
-    Struct representing an [A2S_PLAYER response](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_2)
+    Struct representing an [A2S_PLAYER](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_2) response.
     """
     defstruct [
       :count, :players
     ]
+
+    @type t :: %Players{
+      count: byte,
+      players: list(A2S.Player.t)
+    }
   end
 
   defmodule Player do
     @moduledoc """
-    Struct representing a player entry in an [A2S_PLAYER response](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_2)
+    Struct representing a player entry in an [A2S_PLAYER](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_2) response.
     """
     defstruct [
       :index, :name, :score, :duration
     ]
+
+    @type t :: %Player{
+      index: integer,
+      name: String.t,
+      score: integer, # todo
+      duration: float # todo
+    }
   end
 
   defmodule Rules do
     @moduledoc """
-    Struct representing an [A2S_RULES response](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_3)
+    Struct representing an [A2S_RULES](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_3) response.
     """
     defstruct [
       :count, :rules
     ]
+
+    @type t :: %Rules{
+      count: byte,
+      rules: list(A2S.Rule.t)
+    }
   end
 
   defmodule Rule do
     @moduledoc """
-    Struct representing a rule entry in an [A2S_RULES response](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_3)
+    Struct representing a rule in an [A2S_RULES](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_3) response.
     """
     defstruct [
       :name, :value
     ]
+
+    @type t :: %Rule{
+      name: String.t,
+      value: String.t
+    }
   end
 
   defmodule MultiPacketHeader do
     @moduledoc """
-    Struct representing a [multi-packet response header](https://developer.valvesoftware.com/wiki/Server_queries#Multi-packet_Response_Format)
+    Struct representing a [multi-packet response header](https://developer.valvesoftware.com/wiki/Server_queries#Multi-packet_Response_Format).
     """
     defstruct [
       :id, :total, :index, :size
     ]
+
+    @type t :: %MultiPacketHeader{
+      id: integer,
+      total: byte,
+      index: byte,
+      size: integer
+    }
   end
 
   @simple_udp_header <<-1::signed-32-little>> # <<0xFF, 0xFF, 0xFF, 0xFF>>
@@ -67,59 +99,39 @@ defmodule A2S do
 
   @challenge_response_header ?A # 0x41
 
-  ## Convenience functions
-
-  def challenge_request(:info), do: info_challenge_request()
-  def challenge_request(:players), do: player_challenge_request()
-  def challenge_request(:rules), do: rules_challenge_request()
-
-  def sign_challenge(:info, challenge), do: info_request(challenge)
-  def sign_challenge(:players, challenge), do: player_request(challenge)
-  def sign_challenge(:rules, challenge), do: rules_request(challenge)
-
-  ## A2S_INFO
-
   @info_request_header ?T # 0x54
   @info_response_header ?I # 0x49
-
-  @spec info_challenge_request :: binary
-  def info_challenge_request() do
-    @simple_udp_header <> <<@info_request_header>> <> "Source Engine Query\0"
-  end
-
-  @spec info_request(binary) :: binary
-  def info_request(challenge) do
-    @simple_udp_header <> <<@info_request_header>> <> "Source Engine Query\0" <> challenge
-  end
-
-  ## A2S_PLAYER
 
   @player_request_header ?U # 0x55
   @player_response_header ?D # 0x44
 
-  @spec player_challenge_request :: binary
-  def player_challenge_request() do
-    @simple_udp_header <> <<@player_request_header, -1::signed-32-little>>
-  end
-
-  @spec player_request(binary) :: binary
-  def player_request(challenge) do
-    @simple_udp_header <> <<@player_request_header>> <> challenge
-  end
-
-  ## A2S_RULES
-
   @rules_challenge_header ?V # 0x56
   @rules_response_header ?E # 0x45
 
-  @spec rules_challenge_request :: binary
-  def rules_challenge_request() do
-    @simple_udp_header <> <<@rules_challenge_header, -1::signed-32-little>>
+  @spec challenge_request(:info| :players | :rules) :: binary
+  def challenge_request(:info) do
+    <<@simple_udp_header, @info_request_header, "Source Engine Query\0">>
   end
 
-  @spec rules_request(binary) :: binary
-  def rules_request(challenge) do
-    @simple_udp_header <> <<@rules_challenge_header>> <> challenge
+  def challenge_request(:players) do
+    <<@simple_udp_header, @player_request_header, -1::signed-32-little>>
+  end
+
+  def challenge_request(:rules) do
+    <<@simple_udp_header, @rules_challenge_header, -1::signed-32-little>>
+  end
+
+  @spec sign_challenge(:info|:players|:rules, binary) :: binary
+  def sign_challenge(:info, challenge) do
+    <<@simple_udp_header, @info_request_header, "Source Engine Query\0", challenge::binary>>
+  end
+
+  def sign_challenge(:players, challenge) do
+    <<@simple_udp_header, @player_request_header, challenge::binary>>
+  end
+
+  def sign_challenge(:rules, challenge) do
+    <<@simple_udp_header, @rules_challenge_header, challenge::binary>>
   end
 
   @spec parse_response(binary) ::
@@ -376,7 +388,9 @@ defmodule A2S do
     with {:ok, part} <- parse_multipacket_part(rest), do: {:multipart, part}
   end
 
-  def parse_challenge(packet), do: {:error, {:unknown_packet_header, packet}}
+  def parse_challenge(packet) do
+    {:error, {:unknown_packet_header, packet}}
+  end
 
   ## Helper functions
 
@@ -390,9 +404,9 @@ defmodule A2S do
 
   @spec glue_packets(list({MultiPacketHeader.t, binary})) :: binary
   defp glue_packets(packets, acc \\ [])
-  defp glue_packets([], acc), do: acc |> Enum.reverse |> IO.iodata_to_binary
+  defp glue_packets([], acc), do: IO.iodata_to_binary(acc)
   defp glue_packets([{_multipart_header, payload} | tail], acc) do
-    glue_packets(tail, [payload | acc])
+    glue_packets(tail, [acc | payload])
   end
 
   defp sort_multipart(collected),

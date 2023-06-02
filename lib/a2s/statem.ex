@@ -1,8 +1,8 @@
 defmodule A2S.Statem do
   @moduledoc """
-  A generic state machine responsible for handling all A2S queries to a specific IP address and port. Queries must be performed sequentially per address, as A2S provides no way to associate what replies associate to what responses.
+  A state machine process responsible for handling all A2S queries to a game server running at the given address. Queries must be performed sequentially per address, as A2S provides no way to associate what replies associate to what responses.
 
-  Each instance should exit normally after a certain interval of inactivity to save memory.
+  Each instance should exit normally after a certain interval of inactivity (currently hard-coded to 2 minutes).
   """
 
   @type init_args() :: {:inet.ip_address, :inet.port_number}

@@ -1,6 +1,6 @@
 defmodule A2S.Supervisor do
   @moduledoc """
-  Singleton dynamic supervisor for`A2S.Statem`s.
+  Singleton dynamic supervisor for `A2S.Statem` processes.
   """
 
   use DynamicSupervisor
@@ -12,6 +12,9 @@ defmodule A2S.Supervisor do
     DynamicSupervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @doc """
+  Starts an `A2S.Statem` for the specified `address`.
+  """
   @spec start_child({:inet.ip_address, :inet.port_number}) :: :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def start_child(address) do
     DynamicSupervisor.start_child(__MODULE__, {A2S.Statem, address})
