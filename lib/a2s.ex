@@ -1,9 +1,7 @@
 defmodule A2S do
-  @external_resource "README.md"
-  @moduledoc "README.md"
-             |> File.read!()
-             |> String.split("<!-- MDOC !-->")
-             |> Enum.fetch!(1)
+  @moduledoc """
+  A set of process-less functions for forming A2S challenges, requests, and parsing responses.
+  """
 
 
   import Bitwise

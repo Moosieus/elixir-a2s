@@ -44,7 +44,7 @@ A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by port
 ### Via `A2S`
 This module provides the means form requests, sign challenges, and parse responses for the A2S protocol. You can utilize this module directly in your application for tighter integration, but in turn you'll have to handle the networking or handshaking necessary to execute A2S queries.
 
-The internals of `A2S.Client` may serve as a good reference in that regard.
+See the [roll your own](pages/roll-your-own.md) guide and the internals of `A2S.Client` may serve as a good reference in that regard.
 
 ## Unsupported Games and Features
 The features and game servers listed below are unsupported due to disuse and to favor maintainability.
@@ -90,7 +90,7 @@ Logger.configure(handle_sasl_reports: true)
 - Make statem timeouts configurable
 - Fix `A2S.Supervisor` startup arguments (currently ignored)
 - Fix Registry static name of `:a2s_registry`
-- Implement hexdocs, review moduledocs, and readme
+- Improve hexdocs, review moduledocs, and readme
   - Explain internals of A2S, design motivations for this library, and a roll-your-own guide.
 - Write proper tests
 - Test with significant concurrent usage

@@ -1,6 +1,6 @@
 defmodule A2S.Client do
   @moduledoc """
-  An easy to use client that performs all the handshaking and busy-work necessary to make complete A2S queries.
+  An easy to use client that performs the handshaking and busy-work necessary to make execute A2S queries.
 
   This client handles requests concurrently and should be suitable for most general uses.
 

@@ -7,11 +7,10 @@ defmodule A2S.MixProject do
       version: "0.2.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      description: description(),
-      package: package(),
+      description: "An implementation of Valve's A2S protocol for Elixir.",
       deps: deps(),
-      name: "Elixir_A2S",
-      source_url: "https://github.com/Moosieus/elixir-a2s"
+      docs: docs(), # TODO: Do better documentation. Give HexDocs first class parity with hexdocs
+      package: package(),
     ]
   end
 
@@ -29,8 +28,33 @@ defmodule A2S.MixProject do
     ]
   end
 
-  defp description do
-    "An implementation of Valve's A2S protocol for Elixir."
+  defp docs do
+    [
+      name: "Elixir_A2S",
+      main: "readme",
+      source_ref: "main",
+      source_url: "https://github.com/Moosieus/elixir-a2s",
+      extras: [
+        "README.md"
+      ],
+      groups_for_modules: [
+        "Developer Interface": [
+          A2S.Client,
+          A2S
+        ],
+        "Response Types": [
+          A2S.Info,
+          A2S.Players,
+          A2S.Rules,
+          A2S.Player,
+          A2S.Rule,
+          A2S.MultiPacketHeader
+        ],
+        "Client Internals": [
+          A2S.Supervisor, A2S.Statem, A2S.UDP
+        ]
+      ],
+    ]
   end
 
   defp package do
