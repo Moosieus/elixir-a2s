@@ -11,7 +11,7 @@ The package can be installed by adding `a2s` to your list of dependencies in `mi
 ```elixir
 def deps do
   [
-    {:a2s, "~> 0.2.0"}
+    {:a2s, "~> 0.2.3"}
   ]
 end
 ```
@@ -43,6 +43,17 @@ A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by port
 This module provides the means form requests, sign challenges, and parse responses for the A2S protocol. You can utilize this module directly in your application for tighter integration, but in turn you'll have to handle the networking or handshaking necessary to execute A2S queries.
 
 See the [roll your own](pages/roll-your-own.md) guide and the internals of `A2S.Client` may serve as a good reference in that regard.
+
+## Configuration
+The following configuration options are available for `A2S.Client`:
+
+`:name` - Required, used as the `name` of the top-level supervisor for `A2S.Client`
+
+`:port` - Port on which to open the UDP socket for communicating with game servers. Defaults to `20850`.
+
+`:idle_timeout` - Under the hood, `A2S.Client` spins up one `:gen_statem` processes per address queried. These serve two purposes - to handle all the hand-shaking and packet wrangling necessary to complete A2S queries, and to ensure queries are executed sequentially. After an address hasn't been queried for an extended period, these processes should terminate to free their memory. Defaults to `120_000` (2 minutes, expressed in milliseconds).
+
+`:recv_timeout` - Deadline to receive a response packet for each packet sent in the query sequence. Defaults to `3000` (3 seconds, expressed in milliseconds).
 
 ## Unsupported Games and Features
 The features and game servers listed below are unsupported due to disuse and to favor maintainability.
@@ -84,11 +95,8 @@ Logger.configure(handle_sasl_reports: true)
 
 <!-- MDOC !-->
 
-## (Much) Todo:
-- Make statem timeouts configurable
-- Fix `A2S.DynamicSupervisor` startup arguments (currently ignored)
+## Todo:
 - Fix Registry static name of `:a2s_registry`
-- Add table-driven unit tests for the `A2S` module
+- Add table-driven unit tests for `A2S`
 - Add concurrency-driven tests for `A2S.Client`
 - Internals guide/design motivations/roll-your-own
-- Addc more typespecs and document startup opts

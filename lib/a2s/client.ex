@@ -14,11 +14,13 @@ defmodule A2S.Client do
   def start_link(opts) do
     name = a2s_name!(opts)
     port = Keyword.get(opts, :port, 20850)
-    parser_timeout = Keyword.get(opts, :parser_timeout, 120 * 1000)
+    idle_timeout = Keyword.get(opts, :idle_timeout, 120_000)
+    recv_timeout = Keyword.get(opts, :recv_timeout, 3000)
 
     config = %{
       port: port,
-      parser_timeout: parser_timeout
+      idle_timeout: idle_timeout,
+      recv_timeout: recv_timeout
     }
 
     Supervisor.start_link(__MODULE__, config, name: supervisor_name(name))
@@ -47,10 +49,12 @@ defmodule A2S.Client do
 
   @impl true
   def init(config) do
+    :persistent_term.put({A2S.Statem, :recv_timeout}, config.recv_timeout)
+    :persistent_term.put({A2S.Statem, :idle_timeout}, config.idle_timeout)
+
     children = [
       {Registry, [keys: :unique, name: :a2s_registry]},
-      # these are ignored for the time being
-      {A2S.DynamicSupervisor, []}, #parser_timeout: config.parser_timeout
+      {A2S.DynamicSupervisor, []},
       {A2S.UDP, [port: config.port]}
     ]
 

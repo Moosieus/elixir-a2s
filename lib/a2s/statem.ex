@@ -39,12 +39,12 @@ defmodule A2S.Statem do
 
   @impl :gen_statem
   def init(address) do
-    {:ok, :idle, %{address: address, queue: []}}
+    {:ok, :idle, %{address: address, queue: []}, state_timeout()}
   end
 
   @impl :gen_statem
   def handle_event(:internal, :process_next, :idle, %{queue: []} = data) do
-    {:keep_state, data, {:state_timeout, 120_000, :idle_timeout}} # exit after 2 minutes of idle
+    {:keep_state, data, state_timeout()}
   end
 
   @impl :gen_statem
@@ -54,7 +54,7 @@ defmodule A2S.Statem do
     data = data
     |> Map.put(:caller, caller)
     |> Map.put(:query, query)
-    {:next_state, :await_challenge, %{data | queue: queue}, query_timeout()}
+    {:next_state, :await_challenge, %{data | queue: queue}, recv_timeout()}
   end
 
   @impl :gen_statem
@@ -62,14 +62,14 @@ defmodule A2S.Statem do
     case A2S.parse_challenge(packet) do
       {:challenge, challenge} ->
         :ok = GenServer.call(A2S.UDP, {address, A2S.sign_challenge(query, challenge)})
-        {:next_state, :await_response, data, query_timeout()}
+        {:next_state, :await_response, data, recv_timeout()}
       {:immediate, msg} ->
         reply_and_next(msg, caller, data)
       {:multipart, {header, _body} = part} ->
         data = data
         |> Map.put(:total, header.total)
         |> Map.put(:parts, [part])
-        {:next_state, :collect_multipart, data, query_timeout()}
+        {:next_state, :collect_multipart, data, recv_timeout()}
     end
   end
 
@@ -80,7 +80,7 @@ defmodule A2S.Statem do
         data = data
         |> Map.put(:total, header.total)
         |> Map.put(:parts, [part])
-        {:next_state, :collect_multipart, data, query_timeout()}
+        {:next_state, :collect_multipart, data, recv_timeout()}
       msg ->
         reply_and_next(msg, caller, data)
     end
@@ -98,7 +98,7 @@ defmodule A2S.Statem do
       |> A2S.parse_multipacket_response()
       |> reply_and_next(caller, data)
     else
-      {:next_state, :collect_multipart, %{data | parts: parts}, query_timeout()}
+      {:next_state, :collect_multipart, %{data | parts: parts}, recv_timeout()}
     end
   end
 
@@ -106,23 +106,23 @@ defmodule A2S.Statem do
 
   @impl :gen_statem
   def handle_event({:call, caller}, query_type, :idle, %{queue: []} = data) do
-    {:keep_state, %{data | queue: [{caller, query_type}]}, [{:next_event, :internal, :process_next}, query_timeout()]}
+    {:keep_state, %{data | queue: [{caller, query_type}]}, [{:next_event, :internal, :process_next}, recv_timeout()]}
   end
 
   @impl :gen_statem
   def handle_event({:call, caller}, query_type, _state, %{queue: queue} = data) do
-    {:keep_state, %{data | queue: queue ++ {caller, query_type}}, query_timeout()} # inefficient but oh well.
+    {:keep_state, %{data | queue: queue ++ {caller, query_type}}, recv_timeout()} # inefficient but oh well.
   end
 
   # Timeouts
 
-  def handle_event(:state_timeout, _eventContent, :idle, _data) do
+  def handle_event(:state_timeout, :idle_timeout, :idle, _data) do
     {:stop, :normal}
   end
 
-  def handle_event(:state_timeout, _eventContent, _state, %{caller: caller} = data) do
+  def handle_event(:state_timeout, :recv_timeout, _state, %{caller: caller} = data) do
     data = clear_multipart(data)
-    reply_and_next({:error, :query_timeout}, caller, data)
+    reply_and_next({:error, :recv_timeout}, caller, data)
   end
 
   ## Functions
@@ -130,14 +130,22 @@ defmodule A2S.Statem do
   defp reply_and_next(msg, caller, data) do
     :gen_statem.reply(caller, msg)
     data = clear_query(data)
-    {:next_state, :idle, data, [{:next_event, :internal, :process_next}, query_timeout()]}
+    {:next_state, :idle, data, [{:next_event, :internal, :process_next}, recv_timeout()]}
   end
 
   defp clear_query(data), do: data |> Map.delete(:caller) |> Map.delete(:query)
 
   defp clear_multipart(data), do: data |> Map.delete(:total) |> Map.delete(:parts)
 
-  defp query_timeout(), do: {:state_timeout, 5000, :query_timeout}
+  defp state_timeout() do
+    timeout = :persistent_term.get({__MODULE__, :idle_timeout})
+    {:state_timeout, timeout, :idle_timeout}
+  end
+
+  defp recv_timeout() do
+    timeout = :persistent_term.get({__MODULE__, :recv_timeout})
+    {:state_timeout, timeout, :recv_timeout}
+  end
 
   defp via_registry(address), do: {:via, Registry, {:a2s_registry, address}}
 end
