@@ -4,7 +4,7 @@ defmodule A2S.MixProject do
   def project do
     [
       app: :a2s,
-      version: "0.2.1",
+      version: "0.2.2",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       description: "An implementation of Valve's A2S protocol for Elixir.",
@@ -51,7 +51,7 @@ defmodule A2S.MixProject do
           A2S.MultiPacketHeader
         ],
         "Client Internals": [
-          A2S.Supervisor, A2S.Statem, A2S.UDP
+          A2S.DynamicSupervisor, A2S.Statem, A2S.UDP
         ]
       ],
     ]

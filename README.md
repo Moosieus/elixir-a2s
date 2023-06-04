@@ -88,10 +88,9 @@ Logger.configure(handle_sasl_reports: true)
 
 ## (Much) Todo:
 - Make statem timeouts configurable
-- Fix `A2S.Supervisor` startup arguments (currently ignored)
+- Fix `A2S.DynamicSupervisor` startup arguments (currently ignored)
 - Fix Registry static name of `:a2s_registry`
-- Improve hexdocs, review moduledocs, and readme
-  - Explain internals of A2S, design motivations for this library, and a roll-your-own guide.
-- Write proper tests
-- Test with significant concurrent usage
-- Add more typespecs (maybe)
+- Add table-driven unit tests for the `A2S` module
+- Add concurrency-driven tests for `A2S.Client`
+- Internals guide/design motivations/roll-your-own
+- Addc more typespecs and document startup opts

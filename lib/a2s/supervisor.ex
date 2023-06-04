@@ -1,4 +1,4 @@
-defmodule A2S.Supervisor do
+defmodule A2S.DynamicSupervisor do
   @moduledoc """
   Singleton dynamic supervisor for `A2S.Statem` processes.
   """

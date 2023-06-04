@@ -16,6 +16,29 @@ defmodule A2S do
       # Extra Data Fields (Not guaranteed)
       :gameport, :steamid, :spectator_port, :spectator_name, :keywords, :gameid
     ]
+
+    @type t :: %Info{
+      protocol: byte,
+      name: String.t,
+      map: String.t,
+      folder: String.t,
+      game: String.t,
+      appid: integer,
+      players: byte,
+      max_players: byte,
+      bots: byte,
+      server_type: :dedicated | :non_dedicated | :proxy | :unknown,
+      environment: :linux | :windows | :mac | :unknown,
+      visibility: :public | :private,
+      vac: :secured | :unsecured | :unknown,
+      # Extra Data Fields
+      gameport: :inet.port_number | nil,
+      steamid: integer | nil,
+      spectator_port: :inet.port_number | nil,
+      spectator_name: String.t | nil,
+      keywords: String.t | nil,
+      gameid: integer | nil
+    }
   end
 
   defmodule Players do
@@ -106,7 +129,7 @@ defmodule A2S do
   @rules_challenge_header ?V # 0x56
   @rules_response_header ?E # 0x45
 
-  @spec challenge_request(:info| :players | :rules) :: binary
+  @spec challenge_request(:info | :players | :rules) :: binary
   def challenge_request(:info) do
     <<@simple_udp_header, @info_request_header, "Source Engine Query\0">>
   end
@@ -204,7 +227,7 @@ defmodule A2S do
       server_type: parse_server_type(server_type),
       environment: parse_environment(environment),
       visibility: parse_visibility(visibility),
-      vac: vac,
+      vac: parse_vac(vac),
       version: version,
       gameport: gameport,
       steamid: steamid,
@@ -241,6 +264,10 @@ defmodule A2S do
       _ -> :unknown
     end
   end
+
+  defp parse_vac(0), do: :unsecured
+  defp parse_vac(1), do: :secured
+  defp parse_vac(_), do: :unknown
 
   defp parse_edf(<<>>), do: %{}
   defp parse_edf(<<edf::8, data::binary>>) do

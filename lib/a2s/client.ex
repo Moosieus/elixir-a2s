@@ -34,10 +34,10 @@ defmodule A2S.Client do
   @doc """
   Query a game server running at `address` for the data specified by `query`.
   """
-  @spec query(query :: :info | :players | :rules, {:inet.ip_address, :inet.port_number}) ::
+  @spec query(:info | :players | :rules, {:inet.ip_address, :inet.port_number}, timeout) ::
   {:info, A2S.Info.t}
   | {:players | A2S.Players.t}
-  | {:rules | A2s.Rules.t}
+  | {:rules | A2S.Rules.t}
   | {:error, any}
   def query(query, address, timeout \\ 5000) do
     :gen_statem.call(find_or_start(address), query, timeout)
@@ -50,7 +50,7 @@ defmodule A2S.Client do
     children = [
       {Registry, [keys: :unique, name: :a2s_registry]},
       # these are ignored for the time being
-      {A2S.Supervisor, [name: A2S.Supervisor, parser_timeout: config.parser_timeout]},
+      {A2S.DynamicSupervisor, []}, #parser_timeout: config.parser_timeout
       {A2S.UDP, [port: config.port]}
     ]
 
@@ -70,7 +70,7 @@ defmodule A2S.Client do
     case Registry.lookup(:a2s_registry, address) do
       [{pid, _value}] -> pid
       [] ->
-        case A2S.Supervisor.start_child(address) do
+        case A2S.DynamicSupervisor.start_child(address) do
           {:ok, pid} -> pid
           {:ok, pid, _info} -> pid
           {:error, {:already_started, pid}} -> pid
