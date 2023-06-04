@@ -16,7 +16,7 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc) and published on [HexDocs](https://hexdocs.pm/elixir_a2s/readme.html).
+Documentation is available on [HexDocs](https://hexdocs.pm/elixir_a2s/readme.html) and may also be generated with [ExDoc](https://github.com/elixir-lang/ex_doc).
 
 ## Usage
 There's two general ways to use this library:
