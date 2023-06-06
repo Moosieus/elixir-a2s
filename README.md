@@ -74,9 +74,6 @@ Considered deprecated by Valve and is unsupported by many if not almost all most
 #### [A2S_SERVERQUERY_GETCHALLENGE](https://developer.valvesoftware.com/wiki/Server_queries#A2S_SERVERQUERY_GETCHALLENGE)
 Only used by a handful of niche games. Normal challenge flow should work anyway.
 
-## Issues
-If you'd like to report an issue, please include as much information as possible to reproduce the issue.
-
 ## Debugging
 `A2S.Client` uses Erlang's [gen_statem](https://www.erlang.org/doc/man/gen_statem.html) behavior to function and therefore requires the following `Logger` configuration to report exceptions and crashes:
 
