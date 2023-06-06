@@ -16,7 +16,7 @@ Each colored box is some internal action taken by your app. Each arrow represent
 `A2S.Statem` may be of good reference for how to handle this in your own app.
 
 ## Other notes
-- `A2S.Client` is specifically optimized for querying numerous game servers on frequent basis.
+- `A2S.Client` is specifically optimized for querying numerous game servers on a frequent basis.
 - Official Valve servers may not respond to A2S queries.
 - Some game servers ignore certain fields, filling them with zero values.
 - [A2S_INFO](https://steamcommunity.com/discussions/forum/14/2974028351344359625/) was updated relatively recently to the rest of the protocol to mitigate reflection attacks.
