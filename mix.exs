@@ -9,8 +9,8 @@ defmodule A2S.MixProject do
       start_permanent: Mix.env() == :prod,
       description: "An implementation of Valve's A2S protocol for Elixir.",
       deps: deps(),
-      docs: docs(), # TODO: Do better documentation. Give HexDocs first class parity with hexdocs
-      package: package(),
+      docs: docs(),
+      package: package()
     ]
   end
 
@@ -42,7 +42,7 @@ defmodule A2S.MixProject do
         "pages/assets"
       ],
       groups_for_extras: [
-        "Guides": [
+        Guides: [
           "pages/using-a2s-directly.md"
         ]
       ],
@@ -60,10 +60,12 @@ defmodule A2S.MixProject do
           A2S.MultiPacketHeader
         ],
         "Client Internals": [
-          A2S.DynamicSupervisor, A2S.Statem, A2S.UDP
+          A2S.DynamicSupervisor,
+          A2S.Statem,
+          A2S.UDP
         ]
       ],
-      before_closing_head_tag: &before_closing_head_tag/1,
+      before_closing_head_tag: &before_closing_head_tag/1
     ]
   end
 

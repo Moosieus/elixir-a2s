@@ -5,7 +5,7 @@ defmodule A2S.Statem do
   Each instance should exit normally after a certain interval of inactivity (currently hard-coded to 2 minutes).
   """
 
-  @type init_args() :: {:inet.ip_address, :inet.port_number}
+  @type init_args() :: {:inet.ip_address(), :inet.port_number()}
 
   @behaviour :gen_statem
 
@@ -21,7 +21,7 @@ defmodule A2S.Statem do
     :gen_statem.start_link(via_registry(address), __MODULE__, address, [])
   end
 
-  @spec stop({:inet.ip_address, :inet.port_number}, any) :: :ok
+  @spec stop({:inet.ip_address(), :inet.port_number()}, any) :: :ok
   def stop(address, reason) do
     address |> via_registry |> GenServer.stop(reason)
   end
@@ -54,6 +54,7 @@ defmodule A2S.Statem do
     data = data
     |> Map.put(:caller, caller)
     |> Map.put(:query, query)
+
     {:next_state, :await_challenge, %{data | queue: queue}, recv_timeout()}
   end
 
@@ -63,12 +64,15 @@ defmodule A2S.Statem do
       {:challenge, challenge} ->
         :ok = GenServer.call(A2S.UDP, {address, A2S.sign_challenge(query, challenge)})
         {:next_state, :await_response, data, recv_timeout()}
+
       {:immediate, msg} ->
         reply_and_next(msg, caller, data)
+
       {:multipart, {header, _body} = part} ->
         data = data
         |> Map.put(:total, header.total)
         |> Map.put(:parts, [part])
+
         {:next_state, :collect_multipart, data, recv_timeout()}
     end
   end
@@ -80,7 +84,9 @@ defmodule A2S.Statem do
         data = data
         |> Map.put(:total, header.total)
         |> Map.put(:parts, [part])
+
         {:next_state, :collect_multipart, data, recv_timeout()}
+
       msg ->
         reply_and_next(msg, caller, data)
     end
@@ -111,7 +117,7 @@ defmodule A2S.Statem do
 
   @impl :gen_statem
   def handle_event({:call, caller}, query_type, _state, %{queue: queue} = data) do
-    {:keep_state, %{data | queue: queue ++ {caller, query_type}}, recv_timeout()} # inefficient but oh well.
+    {:keep_state, %{data | queue: queue ++ {caller, query_type}}, recv_timeout()}
   end
 
   # Timeouts

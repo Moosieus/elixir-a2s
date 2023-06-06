@@ -3,7 +3,6 @@ defmodule A2S do
   A set of process-less functions for forming A2S challenges, requests, and parsing responses.
   """
 
-
   import Bitwise
 
   defmodule Info do
@@ -18,27 +17,27 @@ defmodule A2S do
     ]
 
     @type t :: %Info{
-      protocol: byte,
-      name: String.t,
-      map: String.t,
-      folder: String.t,
-      game: String.t,
-      appid: integer,
-      players: byte,
-      max_players: byte,
-      bots: byte,
-      server_type: :dedicated | :non_dedicated | :proxy | :unknown,
-      environment: :linux | :windows | :mac | :unknown,
-      visibility: :public | :private,
-      vac: :secured | :unsecured | :unknown,
-      # Extra Data Fields
-      gameport: :inet.port_number | nil,
-      steamid: integer | nil,
-      spectator_port: :inet.port_number | nil,
-      spectator_name: String.t | nil,
-      keywords: String.t | nil,
-      gameid: integer | nil
-    }
+            protocol: byte,
+            name: String.t(),
+            map: String.t(),
+            folder: String.t(),
+            game: String.t(),
+            appid: integer,
+            players: byte,
+            max_players: byte,
+            bots: byte,
+            server_type: :dedicated | :non_dedicated | :proxy | :unknown,
+            environment: :linux | :windows | :mac | :unknown,
+            visibility: :public | :private,
+            vac: :secured | :unsecured | :unknown,
+            # Extra Data Fields
+            gameport: :inet.port_number() | nil,
+            steamid: integer | nil,
+            spectator_port: :inet.port_number() | nil,
+            spectator_name: String.t() | nil,
+            keywords: String.t() | nil,
+            gameid: integer | nil
+          }
   end
 
   defmodule Players do
@@ -50,9 +49,9 @@ defmodule A2S do
     ]
 
     @type t :: %Players{
-      count: byte,
-      players: list(A2S.Player.t)
-    }
+            count: byte,
+            players: list(A2S.Player.t())
+          }
   end
 
   defmodule Player do
@@ -65,9 +64,9 @@ defmodule A2S do
 
     @type t :: %Player{
       index: integer,
-      name: String.t,
-      score: integer, # todo
-      duration: float # todo
+      name: String.t(),
+      score: integer,
+      duration: float
     }
   end
 
@@ -81,7 +80,7 @@ defmodule A2S do
 
     @type t :: %Rules{
       count: byte,
-      rules: list(A2S.Rule.t)
+      rules: list(A2S.Rule.t())
     }
   end
 
@@ -94,8 +93,8 @@ defmodule A2S do
     ]
 
     @type t :: %Rule{
-      name: String.t,
-      value: String.t
+      name: String.t(),
+      value: String.t()
     }
   end
 
@@ -142,7 +141,7 @@ defmodule A2S do
     <<@simple_udp_header, @rules_challenge_header, -1::signed-32-little>>
   end
 
-  @spec sign_challenge(:info|:players|:rules, binary) :: binary
+  @spec sign_challenge(:info | :players | :rules, binary) :: binary
   def sign_challenge(:info, challenge) do
     <<@simple_udp_header, @info_request_header, "Source Engine Query\0", challenge::binary>>
   end
@@ -156,11 +155,11 @@ defmodule A2S do
   end
 
   @spec parse_response(binary) ::
-  {:info, Info.t}
-  | {:players, Player.t}
-  | {:rules, Rules.t}
-  | {:multipart, {MultiPacketHeader.t, binary}}
-  | {:error, :compression_not_supported}
+    {:info, Info.t()}
+    | {:players, Player.t()}
+    | {:rules, Rules.t()}
+    | {:multipart, {MultiPacketHeader.t(), binary}}
+    | {:error, :compression_not_supported}
 
   def parse_response(<<@simple_udp_header, @info_response_header, payload::binary>>) do
     {:info, parse_info_payload(payload)}
@@ -182,11 +181,11 @@ defmodule A2S do
     {:error, {:unknown_packet_header, packet}}
   end
 
-  @spec parse_multipacket_response(list({MultiPacketHeader.t, binary})) ::
-  {:info, Info.t}
-  | {:players, Player.t}
-  | {:rules, Rules.t}
-  | {:error, any}
+  @spec parse_multipacket_response(list({MultiPacketHeader.t(), binary})) ::
+    {:info, Info.t()}
+    | {:players, Player.t()}
+    | {:rules, Rules.t()}
+    | {:error, any}
   def parse_multipacket_response(packets), do: packets |> sort_multipart |> glue_packets |> parse_response
 
   ## A2S_INFO Parsing
@@ -234,7 +233,7 @@ defmodule A2S do
       spectator_port: spectator_port,
       spectator_name: spectator_name,
       keywords: keywords,
-      gameid: gameid,
+      gameid: gameid
     }
   end
 
@@ -270,48 +269,54 @@ defmodule A2S do
   defp parse_vac(_), do: :unknown
 
   defp parse_edf(<<>>), do: %{}
+
   defp parse_edf(<<edf::8, data::binary>>) do
-    {gameport, data} = if (edf &&& 0x80) !== 0 do
-      <<gameport::signed-16-little, data::binary>> = data
-      {gameport, data}
-    else
-      {nil, data}
-    end
+    {gameport, data} =
+      if (edf &&& 0x80) !== 0 do
+        <<gameport::signed-16-little, data::binary>> = data
+        {gameport, data}
+      else
+        {nil, data}
+      end
 
-    {steamid, data} = if (edf &&& 0x10) !== 0 do
-      <<steamid::signed-64-little, data::binary>> = data
-      {steamid, data}
-    else
-      {nil, data}
-    end
+    {steamid, data} =
+      if (edf &&& 0x10) !== 0 do
+        <<steamid::signed-64-little, data::binary>> = data
+        {steamid, data}
+      else
+        {nil, data}
+      end
 
-    {spec_port, spec_name, data} = if (edf &&& 0x40) !== 0 do
-      <<port::signed-16-little, data::binary>> = data
-      {name, data} = read_null_term_string(data)
-      {port, name, data}
-    else
-      {nil, nil, data}
-    end
+    {spec_port, spec_name, data} =
+      if (edf &&& 0x40) !== 0 do
+        <<port::signed-16-little, data::binary>> = data
+        {name, data} = read_null_term_string(data)
+        {port, name, data}
+      else
+        {nil, nil, data}
+      end
 
-    {keywords, data} = if (edf &&& 0x20) !== 0 do
-      read_null_term_string(data)
-    else
-      {nil, data}
-    end
+    {keywords, data} =
+      if (edf &&& 0x20) !== 0 do
+        read_null_term_string(data)
+      else
+        {nil, data}
+      end
 
-    gameid = if (edf &&& 0x01) !== 0 do
-      <<gameid::signed-64-little>> = data
-      gameid
-    else
-      nil
-    end
+    gameid =
+      if (edf &&& 0x01) !== 0 do
+        <<gameid::signed-64-little>> = data
+        gameid
+      else
+        nil
+      end
 
     {gameport, steamid, spec_port, spec_name, keywords, gameid}
   end
 
   ## A2S_PLAYER Parsing
 
-  @spec parse_player_payload(binary) :: Players.t
+  @spec parse_player_payload(binary) :: Players.t()
   defp parse_player_payload(<<count::unsigned-8, data::binary>>) do
     %Players{
       count: count,
@@ -319,9 +324,10 @@ defmodule A2S do
     }
   end
 
-  @spec read_players(binary) :: list(Player.t)
+  @spec read_players(binary) :: list(Player.t())
   defp read_players(data, players \\ [])
   defp read_players(<<>>, players), do: Enum.reverse(players)
+
   defp read_players(<<index::unsigned-8, data::binary>>, players) do
     {name, data} = read_null_term_string(data)
     <<score::signed-32-little, data::binary>> = data
@@ -331,7 +337,7 @@ defmodule A2S do
       index: index,
       name: name,
       score: score,
-      duration: duration,
+      duration: duration
     }
 
     read_players(data, [player | players])
@@ -339,24 +345,25 @@ defmodule A2S do
 
   ## A2S_RULES Parsing
 
-  @spec parse_rules_payload(payload::binary) :: Rules.t
+  @spec parse_rules_payload(payload :: binary) :: Rules.t()
   defp parse_rules_payload(<<count::signed-16-little, data::binary>>) do
     %Rules{
       count: count,
-      rules: read_rules(data),
+      rules: read_rules(data)
     }
   end
 
-  @spec read_rules(binary) :: list(Rule.t)
+  @spec read_rules(binary) :: list(Rule.t())
   defp read_rules(data, rules \\ [])
   defp read_rules(<<>>, rules), do: Enum.reverse(rules)
+
   defp read_rules(data, rules) do
     {name, data} = read_null_term_string(data)
     {value, data} = read_null_term_string(data)
 
     rule = %Rule{
       name: name,
-      value: value,
+      value: value
     }
 
     read_rules(data, [rule | rules])
@@ -388,10 +395,10 @@ defmodule A2S do
   If the server returns data immediately, and that data is multipart, `:multipart` will be returned.
   """
   @spec parse_challenge(binary) ::
-  {:challenge, binary}
-  | {:immediate, {:info, Info.t} | {:players, Players.t} | {:rules, Rules.t}}
-  | {:multipart, {MultiPacketHeader.t, binary}}
-  | {:error, :compression_not_supported}
+    {:challenge, binary}
+    | {:immediate, {:info, Info.t()} | {:players, Players.t()} | {:rules, Rules.t()}}
+    | {:multipart, {MultiPacketHeader.t(), binary}}
+    | {:error, :compression_not_supported}
 
   def parse_challenge(<<@simple_udp_header, @challenge_response_header, challenge::binary>>) do
     {:challenge, challenge}
@@ -402,7 +409,7 @@ defmodule A2S do
   end
 
   def parse_challenge(<<@simple_udp_header, @player_response_header, payload::binary>>) do
-    {:immediate, {:players,  parse_player_payload(payload)}}
+    {:immediate, {:players, parse_player_payload(payload)}}
   end
 
   def parse_challenge(<<@simple_udp_header, @rules_response_header, payload::binary>>) do
@@ -420,20 +427,22 @@ defmodule A2S do
   ## Helper functions
 
   # Accumulates bytes from data to the next null terminator returning the resulting string and remainder.
-  @spec read_null_term_string(data::binary) :: {String.t, rest::binary}
+  @spec read_null_term_string(data :: binary) :: {String.t(), rest :: binary}
   defp read_null_term_string(data, str \\ [])
   defp read_null_term_string(<<0, rest::binary>>, str), do: {IO.iodata_to_binary(str), rest}
+
   defp read_null_term_string(<<char::binary-size(1), rest::binary>>, str) do
     read_null_term_string(rest, [str, char])
   end
 
-  @spec glue_packets(list({MultiPacketHeader.t, binary})) :: binary
+  @spec glue_packets(list({MultiPacketHeader.t(), binary})) :: binary
   defp glue_packets(packets, acc \\ [])
   defp glue_packets([], acc), do: IO.iodata_to_binary(acc)
+
   defp glue_packets([{_multipart_header, payload} | tail], acc) do
     glue_packets(tail, [acc | payload])
   end
 
   defp sort_multipart(collected),
-    do: Enum.sort(collected, fn ({%{index: a}, _}, {%{index: b}, _}) -> a < b end)
+    do: Enum.sort(collected, fn {%{index: a}, _}, {%{index: b}, _} -> a < b end)
 end

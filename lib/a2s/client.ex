@@ -36,11 +36,11 @@ defmodule A2S.Client do
   @doc """
   Query a game server running at `address` for the data specified by `query`.
   """
-  @spec query(:info | :players | :rules, {:inet.ip_address, :inet.port_number}, timeout) ::
-  {:info, A2S.Info.t}
-  | {:players | A2S.Players.t}
-  | {:rules | A2S.Rules.t}
-  | {:error, any}
+  @spec query(:info | :players | :rules, {:inet.ip_address(), :inet.port_number()}, timeout) ::
+    {:info, A2S.Info.t()}
+    | {:players | A2S.Players.t()}
+    | {:rules | A2S.Rules.t()}
+    | {:error, any}
   def query(query, address, timeout \\ 5000) do
     :gen_statem.call(find_or_start(address), query, timeout)
   end
@@ -69,7 +69,7 @@ defmodule A2S.Client do
 
   defp supervisor_name(name), do: :"#{name}.Supervisor"
 
-  @spec find_or_start({:inet.ip_address, :inet.port_number}) :: pid
+  @spec find_or_start({:inet.ip_address(), :inet.port_number()}) :: pid
   defp find_or_start(address) do
     case Registry.lookup(:a2s_registry, address) do
       [{pid, _value}] -> pid

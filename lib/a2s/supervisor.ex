@@ -15,7 +15,7 @@ defmodule A2S.DynamicSupervisor do
   @doc """
   Starts an `A2S.Statem` for the specified `address`.
   """
-  @spec start_child({:inet.ip_address, :inet.port_number}) :: :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
+  @spec start_child({:inet.ip_address(), :inet.port_number()}) :: :ignore | {:error, any} | {:ok, pid} | {:ok, pid, any}
   def start_child(address) do
     DynamicSupervisor.start_child(__MODULE__, {A2S.Statem, address})
   end
