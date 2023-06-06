@@ -1,7 +1,5 @@
 # A2S
 
-<!-- MDOC !-->
-
 A library for communicating with game servers running [Valve's A2S server query protocol](https://developer.valvesoftware.com/wiki/Server_queries).
 
 ## Installation
@@ -42,7 +40,7 @@ A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by port
 ### Via `A2S`
 This module provides the means form requests, sign challenges, and parse responses for the A2S protocol. You can utilize this module directly in your application for tighter integration, but in turn you'll have to handle the networking or handshaking necessary to execute A2S queries.
 
-See the [roll your own](pages/roll-your-own.md) guide and the internals of `A2S.Client` may serve as a good reference in that regard.
+See [Using A2S Directly](pages/using-a2s-directly.md) guide for further details.
 
 ## Configuration
 The following configuration options are available for `A2S.Client`:
@@ -92,11 +90,3 @@ or in a REPL:
 Logger.configure(handle_otp_reports: true)
 Logger.configure(handle_sasl_reports: true)
 ```
-
-<!-- MDOC !-->
-
-## Todo:
-- Fix Registry static name of `:a2s_registry`
-- Add table-driven unit tests for `A2S`
-- Add concurrency-driven tests for `A2S.Client`
-- Internals guide/design motivations/roll-your-own

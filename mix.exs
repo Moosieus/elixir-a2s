@@ -35,7 +35,16 @@ defmodule A2S.MixProject do
       source_ref: "main",
       source_url: "https://github.com/Moosieus/elixir-a2s",
       extras: [
-        "README.md"
+        "README.md",
+        "pages/using-a2s-directly.md"
+      ],
+      assets: [
+        "pages/assets"
+      ],
+      groups_for_extras: [
+        "Guides": [
+          "pages/using-a2s-directly.md"
+        ]
       ],
       groups_for_modules: [
         "Developer Interface": [
@@ -54,8 +63,21 @@ defmodule A2S.MixProject do
           A2S.DynamicSupervisor, A2S.Statem, A2S.UDP
         ]
       ],
+      before_closing_head_tag: &before_closing_head_tag/1,
     ]
   end
+
+  defp before_closing_head_tag(:html) do
+    """
+    <style>
+      .dark img[src$=".svg"] {
+        filter: invert(93%) hue-rotate(180deg);
+      }
+    </style>
+    """
+  end
+
+  defp before_closing_head_tag(:epub), do: ""
 
   defp package do
     [
