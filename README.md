@@ -53,7 +53,7 @@ The following configuration options are available for `A2S.Client`:
 
 `:recv_timeout` - Deadline to receive a response packet for each packet sent in the query sequence. Defaults to `3000` (3 seconds, expressed in milliseconds).
 
-## Unsupported Games and Features
+## Unsupported Games/Features
 The features and game servers listed below are unsupported due to disuse and to favor maintainability.
 
 #### [Source 2006](https://en.wikipedia.org/wiki/Source_(game_engine)#Source_2006) / "Pre-Orange Box" servers
