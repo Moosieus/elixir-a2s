@@ -273,7 +273,7 @@ defmodule A2S do
   defp parse_edf(<<edf::8, data::binary>>) do
     {gameport, data} =
       if (edf &&& 0x80) !== 0 do
-        <<gameport::signed-16-little, data::binary>> = data
+        <<gameport::16-little, data::binary>> = data
         {gameport, data}
       else
         {nil, data}
