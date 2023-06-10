@@ -158,7 +158,7 @@ defmodule A2S do
     {:info, Info.t()}
     | {:players, Player.t()}
     | {:rules, Rules.t()}
-    | {:multipart, {MultiPacketHeader.t(), binary}}
+    | {:multipacket, {MultiPacketHeader.t(), binary}}
     | {:error, :compression_not_supported}
 
   def parse_response(<<@simple_udp_header, @info_response_header, payload::binary>>) do
@@ -174,7 +174,7 @@ defmodule A2S do
   end
 
   def parse_response(<<@multipacket_udp_header, payload::binary>>) do
-    with {:ok, part} <- parse_multipacket_part(payload), do: {:multipart, part}
+    with {:ok, part} <- parse_multipacket_part(payload), do: {:multipacket, part}
   end
 
   def parse_response(packet) do
@@ -392,12 +392,12 @@ defmodule A2S do
   Parses a challenge response payload. Some game servers don't implement the challenge flow and will
   immediately respond with the requested data. In that case `:immediate` will be returned with the data.
 
-  If the server returns data immediately, and that data is multipart, `:multipart` will be returned.
+  If the server returns data immediately, and that data is multipacket, `:multipacket` will be returned.
   """
   @spec parse_challenge(binary) ::
     {:challenge, binary}
     | {:immediate, {:info, Info.t()} | {:players, Players.t()} | {:rules, Rules.t()}}
-    | {:multipart, {MultiPacketHeader.t(), binary}}
+    | {:multipacket, {MultiPacketHeader.t(), binary}}
     | {:error, :compression_not_supported}
 
   def parse_challenge(<<@simple_udp_header, @challenge_response_header, challenge::binary>>) do
@@ -417,7 +417,7 @@ defmodule A2S do
   end
 
   def parse_challenge(<<@multipacket_udp_header, rest::binary>>) do
-    with {:ok, part} <- parse_multipacket_part(rest), do: {:multipart, part}
+    with {:ok, part} <- parse_multipacket_part(rest), do: {:multipacket, part}
   end
 
   def parse_challenge(packet) do

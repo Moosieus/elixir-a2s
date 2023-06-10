@@ -68,24 +68,24 @@ defmodule A2S.Statem do
       {:immediate, msg} ->
         reply_and_next(msg, caller, data)
 
-      {:multipart, {header, _body} = part} ->
+      {:multipacket, {header, _body} = part} ->
         data = data
         |> Map.put(:total, header.total)
         |> Map.put(:parts, [part])
 
-        {:next_state, :collect_multipart, data, recv_timeout()}
+        {:next_state, :collect_multipacket, data, recv_timeout()}
     end
   end
 
   @impl :gen_statem
   def handle_event(:cast, packet, :await_response, %{caller: caller} = data) do
     case A2S.parse_response(packet) do
-      {:multipart, {header, _body} = part} ->
+      {:multipacket, {header, _body} = part} ->
         data = data
         |> Map.put(:total, header.total)
         |> Map.put(:parts, [part])
 
-        {:next_state, :collect_multipart, data, recv_timeout()}
+        {:next_state, :collect_multipacket, data, recv_timeout()}
 
       msg ->
         reply_and_next(msg, caller, data)
@@ -93,18 +93,18 @@ defmodule A2S.Statem do
   end
 
   @impl :gen_statem
-  def handle_event(:cast, packet, :collect_multipart, %{caller: caller, total: total, parts: parts} = data) do
-    {:multipart, part} = A2S.parse_response(packet)
+  def handle_event(:cast, packet, :collect_multipacket, %{caller: caller, total: total, parts: parts} = data) do
+    {:multipacket, part} = A2S.parse_response(packet)
     parts = [part | parts]
 
     if Enum.count(parts) === total do
-      data = clear_multipart(data)
+      data = clear_multipacket(data)
 
       parts
       |> A2S.parse_multipacket_response()
       |> reply_and_next(caller, data)
     else
-      {:next_state, :collect_multipart, %{data | parts: parts}, recv_timeout()}
+      {:next_state, :collect_multipacket, %{data | parts: parts}, recv_timeout()}
     end
   end
 
@@ -127,7 +127,7 @@ defmodule A2S.Statem do
   end
 
   def handle_event(:state_timeout, :recv_timeout, _state, %{caller: caller} = data) do
-    data = clear_multipart(data)
+    data = clear_multipacket(data)
     reply_and_next({:error, :recv_timeout}, caller, data)
   end
 
@@ -141,7 +141,7 @@ defmodule A2S.Statem do
 
   defp clear_query(data), do: data |> Map.delete(:caller) |> Map.delete(:query)
 
-  defp clear_multipart(data), do: data |> Map.delete(:total) |> Map.delete(:parts)
+  defp clear_multipacket(data), do: data |> Map.delete(:total) |> Map.delete(:parts)
 
   defp state_timeout() do
     timeout = :persistent_term.get({__MODULE__, :idle_timeout})
