@@ -30,7 +30,7 @@ defmodule A2S.MixProject do
 
   defp docs do
     [
-      name: "Elixir_A2S",
+      name: "Elixir A2S",
       main: "readme",
       source_ref: "main",
       source_url: "https://github.com/Moosieus/elixir-a2s",

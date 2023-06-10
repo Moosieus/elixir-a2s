@@ -1,4 +1,4 @@
-# A2S
+# Elixir A2S
 
 A library for communicating with game servers running [Valve's A2S server query protocol](https://developer.valvesoftware.com/wiki/Server_queries).
 
