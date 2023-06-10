@@ -120,7 +120,7 @@ defmodule A2S.Statem do
     {:keep_state, %{data | queue: queue ++ {caller, query_type}}, recv_timeout()}
   end
 
-  # Timeouts
+  ## Timeouts
 
   def handle_event(:state_timeout, :idle_timeout, :idle, _data) do
     {:stop, :normal}

@@ -186,7 +186,7 @@ defmodule A2S do
     | {:players, Player.t()}
     | {:rules, Rules.t()}
     | {:error, any}
-  def parse_multipacket_response(packets), do: packets |> sort_multipart |> glue_packets |> parse_response
+  def parse_multipacket_response(packets), do: packets |> sort_multipacket |> glue_packets |> parse_response
 
   ## A2S_INFO Parsing
 
@@ -439,10 +439,10 @@ defmodule A2S do
   defp glue_packets(packets, acc \\ [])
   defp glue_packets([], acc), do: IO.iodata_to_binary(acc)
 
-  defp glue_packets([{_multipart_header, payload} | tail], acc) do
+  defp glue_packets([{_multipacket_header, payload} | tail], acc) do
     glue_packets(tail, [acc | payload])
   end
 
-  defp sort_multipart(collected),
+  defp sort_multipacket(collected),
     do: Enum.sort(collected, fn {%{index: a}, _}, {%{index: b}, _} -> a < b end)
 end
