@@ -3,7 +3,7 @@ defmodule A2S.MixProject do
 
   def project do
     [
-      app: :a2s,
+      app: :elixir_a2s,
       version: "0.2.6",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
