@@ -1,5 +1,4 @@
 # Elixir A2S
-
 A library for communicating with game servers running [Valve's A2S server query protocol](https://developer.valvesoftware.com/wiki/Server_queries).
 
 ## Installation
@@ -19,7 +18,6 @@ Documentation is available on [HexDocs](https://hexdocs.pm/elixir_a2s/readme.htm
 There's two general ways to use this library:
 
 ### Via `A2S.Client`
-
 An easy to use client that should cover most use-cases. Add `A2S.Client` to your app's supervision tree:
 ```Elixir
 children = [
