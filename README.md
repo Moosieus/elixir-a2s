@@ -3,8 +3,7 @@
 A library for communicating with game servers running [Valve's A2S server query protocol](https://developer.valvesoftware.com/wiki/Server_queries).
 
 ## Installation
-
-The package can be installed by adding `a2s` to your list of dependencies in `mix.exs`:
+Add `:elixir_a2s` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
