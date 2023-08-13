@@ -19,18 +19,18 @@ There's two general ways to use this library:
 
 ### Via `A2S.Client`
 An easy to use client that should cover most use-cases. Add `A2S.Client` to your app's supervision tree:
-```Elixir
+```elixir
 children = [
   {A2S.Client, [name: MyA2SCli]}
 ]
 ```
 Or start the client dynamically: 
-```Elixir
+```elixir
 A2S.Client.start_link([name: MyA2SCli])
 ```
 
 Afterwards querying a game server's as simple as:
-```Elixir
+```elixir
 A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by port
 ```
 
@@ -74,13 +74,13 @@ Only used by a handful of niche games. Normal challenge flow should work anyway.
 ## Debugging
 `A2S.Client` uses Erlang's [gen_statem](https://www.erlang.org/doc/man/gen_statem.html) behavior to function and therefore requires the following `Logger` configuration to report exceptions and crashes:
 
-```Elixir
+```elixir
 config :logger,
   handle_otp_reports: true,
   handle_sasl_reports: true
 ```
 or in a REPL:
-```Elixir
+```elixir
 Logger.configure(handle_otp_reports: true)
 Logger.configure(handle_sasl_reports: true)
 ```
