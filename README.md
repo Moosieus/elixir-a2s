@@ -9,7 +9,7 @@ The package can be installed by adding `a2s` to your list of dependencies in `mi
 ```elixir
 def deps do
   [
-    {:elixir_a2s, "~> 0.3.2"}
+    {:elixir_a2s, "~> 0.3.3"}
   ]
 end
 ```

@@ -4,7 +4,7 @@ defmodule A2S.MixProject do
   def project do
     [
       app: :elixir_a2s,
-      version: "0.3.2",
+      version: "0.3.3",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       description: "An implementation of Valve's A2S protocol for Elixir.",
@@ -24,7 +24,7 @@ defmodule A2S.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, "~> 0.14", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.30.5", only: :dev, runtime: false}
     ]
   end
 
