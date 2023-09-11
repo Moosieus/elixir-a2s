@@ -371,6 +371,11 @@ defmodule A2S do
 
   @spec parse_multipacket_part(packet::binary) :: {:ok, {MultiPacketHeader.t, binary}} | {:error, :compression_not_supported}
 
+  # compressed first packet (not supported) (upgrade this into an exception that provides a full explanation)
+  defp parse_multipacket_part(<<1::1-integer, _>>) do
+    {:error, :compression_not_supported}
+  end
+
   # first packet, uncompressed (supported)
   defp parse_multipacket_part(<<0::1-integer, id::signed-31-little, total::unsigned-8, 0::unsigned-8, size::signed-16-little, rest::binary>>) do
     {:ok, {%MultiPacketHeader{id: id, total: total, index: 0, size: size}, rest}}
@@ -379,11 +384,6 @@ defmodule A2S do
   # other packets
   defp parse_multipacket_part(<<id::signed-32-little, total::unsigned-8, index::unsigned-8, size::signed-16-little, rest::binary>>) do
     {:ok, {%MultiPacketHeader{id: id, total: total, index: index, size: size}, rest}}
-  end
-
-  # compressed first packet (not supported) (upgrade this into an exception that provides a full explanation)
-  defp parse_multipacket_part(<<1::1-integer, _>>) do
-    {:error, :compression_not_supported}
   end
 
   ## A2S Challenge Parsing
@@ -427,7 +427,6 @@ defmodule A2S do
   ## Helper functions
 
   # Accumulates bytes from data to the next null terminator returning the resulting string and remainder.
-  @spec read_null_term_string(data :: binary) :: {String.t(), rest :: binary}
   defp read_null_term_string(data, str \\ [])
   defp read_null_term_string(<<0, rest::binary>>, str), do: {IO.iodata_to_binary(str), rest}
 
@@ -435,7 +434,6 @@ defmodule A2S do
     read_null_term_string(rest, [str, char])
   end
 
-  @spec glue_packets(list({MultiPacketHeader.t(), binary})) :: binary
   defp glue_packets(packets, acc \\ [])
   defp glue_packets([], acc), do: IO.iodata_to_binary(acc)
 

@@ -1,30 +1,61 @@
 defmodule A2STest do
-  @moduledoc """
-  Foregoing tests at the time of writing - Focusing on battle-testing with real world apps and improving docs.
+  use ExUnit.Case, async: true
 
-  Desirable testing includes:
-  - Unit testing for `A2S` against real-world data
-  - Mocking game servers for `A2S.Client`
+  test "parse Hell Let Loose info response" do
+    {:ok, info_packet} = File.read("test/samples/hll_info.bin")
 
-  Ideally unit test data's stored as `list(TestData)`, and serialized to a file via `:erlang.binary_to_term`.
-  """
+    resp = A2S.parse_response(info_packet)
 
-  use ExUnit.Case
-  doctest A2S
+    assert resp === {:info, %A2S.Info{
+      protocol: 17,
+      name: "Glow's Battlegrounds :: Event Server :: discord.gg/glows",
+      map: "SME",
+      folder: "hlldir",
+      game: "Hell Let Loose",
+      appid: 0, # expected behavior for HLL
+      players: 91,
+      max_players: 100,
+      bots: 0,
+      server_type: :dedicated,
+      environment: :windows,
+      visibility: :private,
+      vac: :secured,
+      version: "0.1.1.0",
+      gameport: 7777,
+      steamid: 90175710618294273,
+      spectator_port: nil,
+      spectator_name: nil,
+      keywords: "GS:Ij1rHvaoS722kYAG,CONMETHOD:P2P,P2PADDR:90175710618294273,P2PPORT:7777,SESSIONFLAGS:171,VISIB_i:0",
+      gameid: 686810
+    }}
+  end
 
-  defmodule TestCase do
-    defstruct [
-      :server_name, :game, :data, :func, :expected, :date_collected, :note
-    ]
+  test "parse Squad info response" do
+    {:ok, info_packet} = File.read("test/samples/squad_info.bin")
 
-    @type t :: %TestData{
-      server_name: String.t,
-      game: String.t,
-      data: binary,
-      func: function(),
-      expected: any,
-      date_collected: any,
-      note: String.t
-    }
+    resp = A2S.parse_response(info_packet)
+
+    assert resp === {:info, %A2S.Info{
+      protocol: 17,
+      name: "The Potato Fields 1 | New Player Friendly",
+      map: "Lashkar_AAS_v2",
+      folder: "squad",
+      game: "Squad",
+      appid: 0, # expected for Squad (common to UE4?)
+      players: 99,
+      max_players: 100,
+      bots: 0,
+      server_type: :dedicated,
+      environment: :linux,
+      visibility: :public,
+      vac: :unsecured,
+      version: "dev",
+      gameport: 10250,
+      steamid: 90175629439555585,
+      spectator_port: nil,
+      spectator_name: nil,
+      keywords: "BUILDID:155155,OWNINGID:90175629439555585,OWNINGNAME:The Potato Fields 1 | New Player Friendly,NUMOPENPRIVCONN:2,NUMPUBCONN:98",
+      gameid: 393380
+    }}
   end
 end

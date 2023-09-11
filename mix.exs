@@ -1,10 +1,13 @@
 defmodule A2S.MixProject do
   use Mix.Project
 
+  @version "0.3.4"
+  @source_url "https://github.com/Moosieus/elixir-a2s"
+
   def project do
     [
       app: :elixir_a2s,
-      version: "0.3.3",
+      version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       description: "An implementation of Valve's A2S protocol for Elixir.",
@@ -33,7 +36,7 @@ defmodule A2S.MixProject do
       name: "Elixir A2S",
       main: "readme",
       source_ref: "main",
-      source_url: "https://github.com/Moosieus/elixir-a2s",
+      source_url: @source_url,
       extras: [
         "README.md",
         "pages/using-a2s-directly.md"
@@ -85,7 +88,7 @@ defmodule A2S.MixProject do
     [
       name: "elixir_a2s",
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/Moosieus/elixir-a2s"}
+      links: %{"GitHub" => @source_url}
     ]
   end
 end

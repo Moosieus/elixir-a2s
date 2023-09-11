@@ -1,0 +1,69 @@
+# Active Mode Example
+
+## Setup
+
+This LiveBook demonstrates the minimal viable code to
+
+```elixir
+Mix.install(
+  [
+    {:elixir_a2s, path: Path.join(__DIR__, "../"), env: :dev}
+  ],
+  lockfile: :elixir_a2s
+)
+
+defmodule ParseIP do
+  @doc """
+  Converts a charlist to an {ip, port} tuple as specified by :gen_udp
+  """
+  def parse(addr) when is_list(addr) do
+    [rest, port] = :string.split(addr, ~c":")
+    {:ok, ip} = :inet.parse_ipv4_address(rest)
+    {port, []} = :string.to_integer(port)
+    {ip, port}
+  end
+end
+```
+
+## Parameters
+
+```elixir
+# target server
+game_server = ~c"216.52.148.47:27015"
+game_server = ~c"127.0.0.1:27015"
+# timeout
+timeout = 3000
+# udp port (probably dont need to change this)
+source_port = 20850
+
+address = ParseIP.parse(game_server)
+```
+
+## Query the server
+
+`try/rescue`'s used to ensure the `:gen_udp` `socket` is closed even if an exception occurs.
+
+```elixir
+{:ok, socket} = :gen_udp.open(source_port, [:binary, {:active, false}])
+
+try do
+  :ok = :gen_udp.send(socket, address, A2S.challenge_request(:info))
+
+  {:ok, {_addr, _port, challenge}} = :gen_udp.recv(socket, 0, timeout)
+
+  case A2S.parse_challenge(challenge) do
+    {:immediate, {:info, info}} ->
+      IO.inspect(info, label: "info", limit: :infinity)
+
+    {:challenge, challenge} ->
+      :ok = :gen_udp.send(socket, address, A2S.sign_challenge(:info, challenge))
+      {:ok, {_addr, _port, data}} = :gen_udp.recv(socket, 0, timeout)
+      {:info, info} = A2S.parse_response(data)
+      IO.inspect(info, label: "info", limit: :infinity)
+  end
+rescue
+  e -> IO.puts(Exception.format(:error, e, __STACKTRACE__))
+end
+
+:gen_udp.close(socket)
+```
