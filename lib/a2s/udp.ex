@@ -8,13 +8,13 @@ defmodule A2S.UDP do
   ## API
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, [name: __MODULE__])
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   ## Callbacks
 
   @impl true
-  def init([port: port]) do
+  def init(port: port) do
     case :gen_udp.open(port, [:binary, active: true]) do
       {:error, reason} -> {:stop, reason}
       {:ok, socket} -> {:ok, socket}

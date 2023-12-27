@@ -10,10 +10,27 @@ defmodule A2S do
     Struct representing an [A2S_INFO](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format) response.
     """
     defstruct [
-      :protocol, :name, :map, :folder, :game, :appid, :players, :max_players, :bots, :server_type,
-      :environment, :visibility, :vac, :version,
+      :protocol,
+      :name,
+      :map,
+      :folder,
+      :game,
+      :appid,
+      :players,
+      :max_players,
+      :bots,
+      :server_type,
+      :environment,
+      :visibility,
+      :vac,
+      :version,
       # Extra Data Fields (Not guaranteed)
-      :gameport, :steamid, :spectator_port, :spectator_name, :keywords, :gameid
+      :gameport,
+      :steamid,
+      :spectator_port,
+      :spectator_name,
+      :keywords,
+      :gameid
     ]
 
     @type t :: %Info{
@@ -45,7 +62,8 @@ defmodule A2S do
     Struct representing an [A2S_PLAYER](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_2) response.
     """
     defstruct [
-      :count, :players
+      :count,
+      :players
     ]
 
     @type t :: %Players{
@@ -59,15 +77,18 @@ defmodule A2S do
     Struct representing a player entry in an [A2S_PLAYER](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_2) response.
     """
     defstruct [
-      :index, :name, :score, :duration
+      :index,
+      :name,
+      :score,
+      :duration
     ]
 
     @type t :: %Player{
-      index: integer,
-      name: String.t(),
-      score: integer,
-      duration: float
-    }
+            index: integer,
+            name: String.t(),
+            score: integer,
+            duration: float
+          }
   end
 
   defmodule Rules do
@@ -75,13 +96,14 @@ defmodule A2S do
     Struct representing an [A2S_RULES](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_3) response.
     """
     defstruct [
-      :count, :rules
+      :count,
+      :rules
     ]
 
     @type t :: %Rules{
-      count: byte,
-      rules: list(A2S.Rule.t())
-    }
+            count: byte,
+            rules: list(A2S.Rule.t())
+          }
   end
 
   defmodule Rule do
@@ -89,13 +111,14 @@ defmodule A2S do
     Struct representing a rule in an [A2S_RULES](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_3) response.
     """
     defstruct [
-      :name, :value
+      :name,
+      :value
     ]
 
     @type t :: %Rule{
-      name: String.t(),
-      value: String.t()
-    }
+            name: String.t(),
+            value: String.t()
+          }
   end
 
   defmodule MultiPacketHeader do
@@ -103,30 +126,42 @@ defmodule A2S do
     Struct representing a [multi-packet response header](https://developer.valvesoftware.com/wiki/Server_queries#Multi-packet_Response_Format).
     """
     defstruct [
-      :id, :total, :index, :size
+      :id,
+      :total,
+      :index,
+      :size
     ]
 
     @type t :: %MultiPacketHeader{
-      id: integer,
-      total: byte,
-      index: byte,
-      size: integer
-    }
+            id: integer,
+            total: byte,
+            index: byte,
+            size: integer
+          }
   end
 
-  @simple_udp_header <<-1::signed-32-little>> # <<0xFF, 0xFF, 0xFF, 0xFF>>
-  @multipacket_udp_header <<-2::signed-32-little>> # <<0xFF, 0xFF, 0xFF, 0xFE>> (primarily for A2S_RULES)
+  # <<0xFF, 0xFF, 0xFF, 0xFF>>
+  @simple_udp_header <<-1::signed-32-little>>
+  # <<0xFF, 0xFF, 0xFF, 0xFE>> (primarily for A2S_RULES)
+  @multipacket_udp_header <<-2::signed-32-little>>
 
-  @challenge_response_header ?A # 0x41
+  # 0x41
+  @challenge_response_header ?A
 
-  @info_request_header ?T # 0x54
-  @info_response_header ?I # 0x49
+  # 0x54
+  @info_request_header ?T
+  # 0x49
+  @info_response_header ?I
 
-  @player_request_header ?U # 0x55
-  @player_response_header ?D # 0x44
+  # 0x55
+  @player_request_header ?U
+  # 0x44
+  @player_response_header ?D
 
-  @rules_challenge_header ?V # 0x56
-  @rules_response_header ?E # 0x45
+  # 0x56
+  @rules_challenge_header ?V
+  # 0x45
+  @rules_response_header ?E
 
   @spec challenge_request(:info | :players | :rules) :: binary
   def challenge_request(:info) do
@@ -155,11 +190,11 @@ defmodule A2S do
   end
 
   @spec parse_response(binary) ::
-    {:info, Info.t()}
-    | {:players, Player.t()}
-    | {:rules, Rules.t()}
-    | {:multipacket, {MultiPacketHeader.t(), binary}}
-    | {:error, :compression_not_supported}
+          {:info, Info.t()}
+          | {:players, Player.t()}
+          | {:rules, Rules.t()}
+          | {:multipacket, {MultiPacketHeader.t(), binary}}
+          | {:error, :compression_not_supported}
 
   def parse_response(<<@simple_udp_header, @info_response_header, payload::binary>>) do
     {:info, parse_info_payload(payload)}
@@ -182,11 +217,12 @@ defmodule A2S do
   end
 
   @spec parse_multipacket_response(list({MultiPacketHeader.t(), binary})) ::
-    {:info, Info.t()}
-    | {:players, Player.t()}
-    | {:rules, Rules.t()}
-    | {:error, any}
-  def parse_multipacket_response(packets), do: packets |> sort_multipacket |> glue_packets |> parse_response
+          {:info, Info.t()}
+          | {:players, Player.t()}
+          | {:rules, Rules.t()}
+          | {:error, any}
+  def parse_multipacket_response(packets),
+    do: packets |> sort_multipacket |> glue_packets |> parse_response
 
   ## A2S_INFO Parsing
 
@@ -242,7 +278,7 @@ defmodule A2S do
       ?d -> :dedicated
       ?l -> :non_dedicated
       ?p -> :proxy
-      _  -> :unknown
+      _ -> :unknown
     end
   end
 
@@ -252,7 +288,7 @@ defmodule A2S do
       ?w -> :windows
       ?m -> :mac
       ?o -> :mac
-      _  -> :unknown
+      _ -> :unknown
     end
   end
 
@@ -369,7 +405,8 @@ defmodule A2S do
     read_rules(data, [rule | rules])
   end
 
-  @spec parse_multipacket_part(packet::binary) :: {:ok, {MultiPacketHeader.t, binary}} | {:error, :compression_not_supported}
+  @spec parse_multipacket_part(packet :: binary) ::
+          {:ok, {MultiPacketHeader.t(), binary}} | {:error, :compression_not_supported}
 
   # compressed first packet (not supported) (upgrade this into an exception that provides a full explanation)
   defp parse_multipacket_part(<<1::1-integer, _>>) do
@@ -377,12 +414,18 @@ defmodule A2S do
   end
 
   # first packet, uncompressed (supported)
-  defp parse_multipacket_part(<<0::1-integer, id::signed-31-little, total::unsigned-8, 0::unsigned-8, size::signed-16-little, rest::binary>>) do
+  defp parse_multipacket_part(
+         <<0::1-integer, id::signed-31-little, total::unsigned-8, 0::unsigned-8,
+           size::signed-16-little, rest::binary>>
+       ) do
     {:ok, {%MultiPacketHeader{id: id, total: total, index: 0, size: size}, rest}}
   end
 
   # other packets
-  defp parse_multipacket_part(<<id::signed-32-little, total::unsigned-8, index::unsigned-8, size::signed-16-little, rest::binary>>) do
+  defp parse_multipacket_part(
+         <<id::signed-32-little, total::unsigned-8, index::unsigned-8, size::signed-16-little,
+           rest::binary>>
+       ) do
     {:ok, {%MultiPacketHeader{id: id, total: total, index: index, size: size}, rest}}
   end
 
@@ -395,10 +438,10 @@ defmodule A2S do
   If the server returns data immediately, and that data is multipacket, `:multipacket` will be returned.
   """
   @spec parse_challenge(binary) ::
-    {:challenge, binary}
-    | {:immediate, {:info, Info.t()} | {:players, Players.t()} | {:rules, Rules.t()}}
-    | {:multipacket, {MultiPacketHeader.t(), binary}}
-    | {:error, :compression_not_supported}
+          {:challenge, binary}
+          | {:immediate, {:info, Info.t()} | {:players, Players.t()} | {:rules, Rules.t()}}
+          | {:multipacket, {MultiPacketHeader.t(), binary}}
+          | {:error, :compression_not_supported}
 
   def parse_challenge(<<@simple_udp_header, @challenge_response_header, challenge::binary>>) do
     {:challenge, challenge}

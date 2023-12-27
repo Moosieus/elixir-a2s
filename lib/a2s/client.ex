@@ -37,10 +37,10 @@ defmodule A2S.Client do
   Query a game server running at `address` for the data specified by `query`.
   """
   @spec query(:info | :players | :rules, {:inet.ip_address(), :inet.port_number()}, timeout) ::
-    {:info, A2S.Info.t()}
-    | {:players | A2S.Players.t()}
-    | {:rules | A2S.Rules.t()}
-    | {:error, any}
+          {:info, A2S.Info.t()}
+          | {:players | A2S.Players.t()}
+          | {:rules | A2S.Rules.t()}
+          | {:error, any}
   def query(query, address, timeout \\ 5000) do
     :gen_statem.call(find_or_start(address), query, timeout)
   end
@@ -72,7 +72,9 @@ defmodule A2S.Client do
   @spec find_or_start({:inet.ip_address(), :inet.port_number()}) :: pid
   defp find_or_start(address) do
     case Registry.lookup(:a2s_registry, address) do
-      [{pid, _value}] -> pid
+      [{pid, _value}] ->
+        pid
+
       [] ->
         case A2S.DynamicSupervisor.start_child(address) do
           {:ok, pid} -> pid

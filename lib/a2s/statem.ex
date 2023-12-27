@@ -45,9 +45,7 @@ defmodule A2S.Statem do
 
   @spec stop({:inet.ip_address(), :inet.port_number()}, any) :: :ok
   def stop(address, reason) do
-    via_registry(address)
-    # should this be `:gen_statem.stop(reason)`?
-    |> GenServer.stop(reason)
+    :gen_statem.stop(via_registry(address), reason, :infinity)
   end
 
   defp via_registry(address), do: {:via, Registry, {:a2s_registry, address}}
