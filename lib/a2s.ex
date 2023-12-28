@@ -179,6 +179,8 @@ defmodule A2S do
   @rules_challenge_header ?V
   @rules_response_header ?E
 
+  ## Module API
+
   @spec challenge_request(:info | :players | :rules) :: binary()
   def challenge_request(:info) do
     <<@simple_udp_header, @info_request_header, "Source Engine Query\0">>
@@ -196,6 +198,73 @@ defmodule A2S do
     raise ArgumentError, """
     Unknown A2S query #{inspect(term)}, expected one of #{inspect(@queries)}.
     """
+  end
+
+  @doc """
+  Parses a challenge response payload. Some game servers don't implement the challenge flow and will
+  immediately respond with the requested data. In that case `:immediate` will be returned with the data.
+
+  If the server returns data immediately, and that data is multipacket, `:multipacket` will be returned.
+  """
+  @spec parse_challenge(binary()) ::
+          {:challenge, binary()}
+          | {:immediate, {:info, Info.t()} | {:players, Players.t()} | {:rules, Rules.t()}}
+          | {:multipacket, {MultiPacketHeader.t(), binary()}}
+          | {:error, {:unknown_packet_header, binary()} | :compression_not_supported}
+
+  def parse_challenge(<<@simple_udp_header, @challenge_response_header, challenge::binary>>) do
+    {:challenge, challenge}
+  end
+
+  def parse_challenge(<<@simple_udp_header, @info_response_header, payload::binary>> = data) do
+    try do
+      {:immediate, {:info, parse_info_payload(payload)}}
+    rescue
+      _ -> {:error, %A2S.ParseError{response_type: :info, data: data}}
+    end
+  end
+
+  def parse_challenge(<<@simple_udp_header, @player_response_header, payload::binary>> = data) do
+    try do
+      {:immediate, {:players, parse_player_payload(payload)}}
+    rescue
+      _ -> {:error, %A2S.ParseError{response_type: :players, data: data}}
+    end
+  end
+
+  def parse_challenge(<<@simple_udp_header, @rules_response_header, payload::binary>> = data) do
+    try do
+      {:immediate, {:rules, parse_rules_payload(payload)}}
+    rescue
+      _ -> {:error, %A2S.ParseError{response_type: :rules, data: data}}
+    end
+  end
+
+  def parse_challenge(<<@multipacket_udp_header, rest::binary>> = data) do
+    try do
+      case parse_multipacket_part(rest) do
+        {:ok, part} -> {:multipacket, part}
+        {:error, reason} -> {:error, reason}
+      end
+    rescue
+      _ -> {:error, %A2S.ParseError{response_type: :multipacket_part, data: data}}
+    end
+  end
+
+  def parse_challenge(packet) when is_binary(packet) do
+    {:error, {:unknown_packet_header, packet}}
+  end
+
+  @spec parse_challenge!(binary()) ::
+          {:challenge, binary()}
+          | {:immediate,
+             {:info, A2S.Info.t()} | {:players, A2S.Players.t()} | {:rules, A2S.Rules.t()}}
+          | {:multipacket, {A2S.MultiPacketHeader.t(), binary()}}
+  def parse_challenge!(packet) do
+    case parse_challenge(packet) do
+      {:error, error} -> raise error
+      result -> result
+    end
   end
 
   @spec sign_challenge(:info | :players | :rules, challenge :: binary()) :: binary()
@@ -264,10 +333,10 @@ defmodule A2S do
   end
 
   @spec parse_response!(binary()) ::
-  {:info, Info.t()}
-  | {:players, Player.t()}
-  | {:rules, Rules.t()}
-  | {:multipacket, {MultiPacketHeader.t(), binary()}}
+          {:info, Info.t()}
+          | {:players, Player.t()}
+          | {:rules, Rules.t()}
+          | {:multipacket, {MultiPacketHeader.t(), binary()}}
 
   def parse_response!(packet) when is_binary(packet) do
     case parse_response(packet) do
@@ -505,75 +574,6 @@ defmodule A2S do
   end
 
   defp parse_multipacket_part(_), do: raise("bad multipacket part")
-
-  ## A2S Challenge Parsing
-
-  @doc """
-  Parses a challenge response payload. Some game servers don't implement the challenge flow and will
-  immediately respond with the requested data. In that case `:immediate` will be returned with the data.
-
-  If the server returns data immediately, and that data is multipacket, `:multipacket` will be returned.
-  """
-  @spec parse_challenge(binary()) ::
-          {:challenge, binary()}
-          | {:immediate, {:info, Info.t()} | {:players, Players.t()} | {:rules, Rules.t()}}
-          | {:multipacket, {MultiPacketHeader.t(), binary()}}
-          | {:error, {:unknown_packet_header, binary()} | :compression_not_supported}
-
-  def parse_challenge(<<@simple_udp_header, @challenge_response_header, challenge::binary>>) do
-    {:challenge, challenge}
-  end
-
-  def parse_challenge(<<@simple_udp_header, @info_response_header, payload::binary>> = data) do
-    try do
-      {:immediate, {:info, parse_info_payload(payload)}}
-    rescue
-      _ -> {:error, %A2S.ParseError{response_type: :info, data: data}}
-    end
-  end
-
-  def parse_challenge(<<@simple_udp_header, @player_response_header, payload::binary>> = data) do
-    try do
-      {:immediate, {:players, parse_player_payload(payload)}}
-    rescue
-      _ -> {:error, %A2S.ParseError{response_type: :players, data: data}}
-    end
-  end
-
-  def parse_challenge(<<@simple_udp_header, @rules_response_header, payload::binary>> = data) do
-    try do
-      {:immediate, {:rules, parse_rules_payload(payload)}}
-    rescue
-      _ -> {:error, %A2S.ParseError{response_type: :rules, data: data}}
-    end
-  end
-
-  def parse_challenge(<<@multipacket_udp_header, rest::binary>> = data) do
-    try do
-      case parse_multipacket_part(rest) do
-        {:ok, part} -> {:multipacket, part}
-        {:error, reason} -> {:error, reason}
-      end
-    rescue
-      _ -> {:error, %A2S.ParseError{response_type: :multipacket_part, data: data}}
-    end
-  end
-
-  def parse_challenge(packet) when is_binary(packet) do
-    {:error, {:unknown_packet_header, packet}}
-  end
-
-  @spec parse_challenge!(binary()) ::
-          {:challenge, binary()}
-          | {:immediate,
-             {:info, A2S.Info.t()} | {:players, A2S.Players.t()} | {:rules, A2S.Rules.t()}}
-          | {:multipacket, {A2S.MultiPacketHeader.t(), binary()}}
-  def parse_challenge!(packet) do
-    case parse_challenge(packet) do
-      {:error, error} -> raise error
-      result -> result
-    end
-  end
 
   ## Helper functions
 
