@@ -140,6 +140,8 @@ defmodule A2S do
           }
   end
 
+  @queries [:info, :players, :rules]
+
   # <<0xFF, 0xFF, 0xFF, 0xFF>>
   @simple_udp_header <<-1::signed-32-little>>
   # <<0xFF, 0xFF, 0xFF, 0xFE>> (primarily for A2S_RULES)
@@ -176,17 +178,29 @@ defmodule A2S do
     <<@simple_udp_header, @rules_challenge_header, -1::signed-32-little>>
   end
 
-  @spec sign_challenge(:info | :players | :rules, binary) :: binary
-  def sign_challenge(:info, challenge) do
+  def challenge_request(term) do
+    raise ArgumentError, """
+    Unknown A2S query #{inspect(term)}, expected one of #{inspect(@queries)}.
+    """
+  end
+
+  @spec sign_challenge(:info | :players | :rules, challenge :: binary) :: binary
+  def sign_challenge(:info, challenge) when is_binary(challenge) do
     <<@simple_udp_header, @info_request_header, "Source Engine Query\0", challenge::binary>>
   end
 
-  def sign_challenge(:players, challenge) do
+  def sign_challenge(:players, challenge) when is_binary(challenge) do
     <<@simple_udp_header, @player_request_header, challenge::binary>>
   end
 
-  def sign_challenge(:rules, challenge) do
+  def sign_challenge(:rules, challenge) when is_binary(challenge) do
     <<@simple_udp_header, @rules_challenge_header, challenge::binary>>
+  end
+
+  def sign_challenge(term, _challenge) when term not in @queries do
+    raise ArgumentError, """
+    Unknown A2S query #{inspect(term)}, expected one of #{inspect(@queries)}.
+    """
   end
 
   @spec parse_response(binary) ::
@@ -212,7 +226,7 @@ defmodule A2S do
     with {:ok, part} <- parse_multipacket_part(payload), do: {:multipacket, part}
   end
 
-  def parse_response(packet) do
+  def parse_response(packet) when is_binary(packet) do
     {:error, {:unknown_packet_header, packet}}
   end
 
@@ -221,13 +235,19 @@ defmodule A2S do
           | {:players, Player.t()}
           | {:rules, Rules.t()}
           | {:error, any}
-  def parse_multipacket_response(packets),
-    do: packets |> sort_multipacket |> glue_packets |> parse_response
+  def parse_multipacket_response(packets) when is_list(packets) do
+    packets
+    |> sort_multipacket()
+    |> glue_packets()
+    |> parse_response()
+  end
 
   ## A2S_INFO Parsing
 
   @spec parse_info_payload(binary) :: Info.t()
-  defp parse_info_payload(<<protocol::8, data::binary>>) do
+  defp parse_info_payload(data) when is_binary(data) do
+    <<protocol::8, data::binary>> = data
+
     {name, data} = read_null_term_string(data)
     {map, data} = read_null_term_string(data)
     {folder, data} = read_null_term_string(data)
@@ -406,7 +426,8 @@ defmodule A2S do
   end
 
   @spec parse_multipacket_part(packet :: binary) ::
-          {:ok, {MultiPacketHeader.t(), binary}} | {:error, :compression_not_supported}
+          {:ok, {MultiPacketHeader.t(), binary}}
+          | {:error, :compression_not_supported}
 
   # compressed first packet (not supported) (upgrade this into an exception that provides a full explanation)
   defp parse_multipacket_part(<<1::1-integer, _>>) do
@@ -414,18 +435,25 @@ defmodule A2S do
   end
 
   # first packet, uncompressed (supported)
-  defp parse_multipacket_part(
-         <<0::1-integer, id::signed-31-little, total::unsigned-8, 0::unsigned-8,
-           size::signed-16-little, rest::binary>>
-       ) do
+  defp parse_multipacket_part(<<
+         0::1-integer,
+         id::signed-31-little,
+         total::unsigned-8,
+         0::unsigned-8,
+         size::signed-16-little,
+         rest::binary
+       >>) do
     {:ok, {%MultiPacketHeader{id: id, total: total, index: 0, size: size}, rest}}
   end
 
   # other packets
-  defp parse_multipacket_part(
-         <<id::signed-32-little, total::unsigned-8, index::unsigned-8, size::signed-16-little,
-           rest::binary>>
-       ) do
+  defp parse_multipacket_part(<<
+         id::signed-32-little,
+         total::unsigned-8,
+         index::unsigned-8,
+         size::signed-16-little,
+         rest::binary
+       >>) do
     {:ok, {%MultiPacketHeader{id: id, total: total, index: index, size: size}, rest}}
   end
 
@@ -437,11 +465,11 @@ defmodule A2S do
 
   If the server returns data immediately, and that data is multipacket, `:multipacket` will be returned.
   """
-  @spec parse_challenge(binary) ::
-          {:challenge, binary}
+  @spec parse_challenge(binary()) ::
+          {:challenge, binary()}
           | {:immediate, {:info, Info.t()} | {:players, Players.t()} | {:rules, Rules.t()}}
-          | {:multipacket, {MultiPacketHeader.t(), binary}}
-          | {:error, :compression_not_supported}
+          | {:multipacket, {MultiPacketHeader.t(), binary()}}
+          | {:error, {:unknown_packet_header, binary()} | :compression_not_supported}
 
   def parse_challenge(<<@simple_udp_header, @challenge_response_header, challenge::binary>>) do
     {:challenge, challenge}
@@ -463,8 +491,19 @@ defmodule A2S do
     with {:ok, part} <- parse_multipacket_part(rest), do: {:multipacket, part}
   end
 
-  def parse_challenge(packet) do
+  def parse_challenge(packet) when is_binary(packet) do
     {:error, {:unknown_packet_header, packet}}
+  end
+
+  @spec parse_challenge!(binary()) ::
+          {:challenge, binary()}
+          | {:immediate, {:info, A2S.Info.t()} | {:players, A2S.Players.t()} | {:rules, A2S.Rules.t()}}
+          | {:multipacket, {A2S.MultiPacketHeader.t(), binary()}}
+  def parse_challenge!(packet) do
+    case parse_challenge(packet) do
+      {:error, error} -> raise error
+      result -> result
+    end
   end
 
   ## Helper functions
