@@ -14,6 +14,7 @@ defmodule A2S.Statem do
   def callback_mode, do: :handle_event_function
 
   defmodule Data do
+    @moduledoc false
     defstruct [:address, :caller, :query, :total, :parts]
   end
 

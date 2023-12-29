@@ -1,6 +1,6 @@
 defmodule A2S.UDP do
   @moduledoc """
-  GenServer wrapper over `:gen_udp`, responsible for sending packets to game-servers and routing received packets to the appropriate `A2S.Statem` process.
+  GenServer wrapper over `:gen_udp` responsible for sending packets to game servers and routing received packets to the appropriate `A2S.Statem` process.
   """
 
   use GenServer
