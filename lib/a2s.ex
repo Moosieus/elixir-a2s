@@ -294,7 +294,8 @@ defmodule A2S do
     try do
       {:multipacket, parse_multipacket_part(payload)}
     rescue
-      error -> {:error, %A2S.ParseError{response_type: :multipacket_part, data: data, exception: error}}
+      error ->
+        {:error, %A2S.ParseError{response_type: :multipacket_part, data: data, exception: error}}
     end
   end
 
@@ -356,7 +357,7 @@ defmodule A2S do
 
     compressed = (id &&& 0x80000000) !== 0
 
-    if compressed do raise "compression not supported" end
+    if compressed, do: raise("compression not supported")
 
     {%MultiPacketHeader{
        id: id,
