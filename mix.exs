@@ -27,7 +27,8 @@ defmodule A2S.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, "~> 0.30.5", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.30.5", only: :dev, runtime: false},
+      {:bzip2_decomp, "~> 0.1.0"}
     ]
   end
 

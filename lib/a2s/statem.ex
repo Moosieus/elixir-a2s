@@ -99,6 +99,9 @@ defmodule A2S.Statem do
           %Data{data | total: header.total, parts: [part]},
           recv_timeout()
         }
+
+      {:error, reason} ->
+        reply_and_next({:error, reason}, data)
     end
   end
 

@@ -8,6 +8,11 @@ defmodule A2S.ParseError do
   def message(%__MODULE__{response_type: rt}) do
     "Invalid data in #{rt} response"
   end
+
+  @type t :: %A2S.ParseError{
+          response_type: atom() | nil,
+          data: binary()
+        }
 end
 
 defmodule A2S do
@@ -46,26 +51,26 @@ defmodule A2S do
     ]
 
     @type t :: %Info{
-            protocol: byte,
+            protocol: byte(),
             name: String.t(),
             map: String.t(),
             folder: String.t(),
             game: String.t(),
-            appid: integer,
-            players: byte,
-            max_players: byte,
-            bots: byte,
+            appid: integer(),
+            players: byte(),
+            max_players: byte(),
+            bots: byte(),
             server_type: :dedicated | :non_dedicated | :proxy | :unknown,
             environment: :linux | :windows | :mac | :unknown,
             visibility: :public | :private,
             vac: :secured | :unsecured | :unknown,
             # Extra Data Fields
             gameport: :inet.port_number() | nil,
-            steamid: integer | nil,
+            steamid: integer() | nil,
             spectator_port: :inet.port_number() | nil,
             spectator_name: String.t() | nil,
             keywords: String.t() | nil,
-            gameid: integer | nil
+            gameid: integer() | nil
           }
   end
 
@@ -79,7 +84,7 @@ defmodule A2S do
     ]
 
     @type t :: %Players{
-            count: byte,
+            count: byte(),
             players: list(A2S.Player.t())
           }
   end
@@ -96,10 +101,10 @@ defmodule A2S do
     ]
 
     @type t :: %Player{
-            index: integer,
+            index: integer(),
             name: String.t(),
-            score: integer,
-            duration: float
+            score: integer(),
+            duration: float()
           }
   end
 
@@ -113,7 +118,7 @@ defmodule A2S do
     ]
 
     @type t :: %Rules{
-            count: byte,
+            count: byte(),
             rules: list(A2S.Rule.t())
           }
   end
@@ -141,14 +146,16 @@ defmodule A2S do
       :id,
       :total,
       :index,
-      :size
+      :size,
+      :bzip?
     ]
 
     @type t :: %MultiPacketHeader{
-            id: integer,
-            total: byte,
-            index: byte,
-            size: integer
+            id: integer(),
+            total: byte(),
+            index: byte(),
+            size: integer(),
+            bzip?: boolean()
           }
   end
 
@@ -177,12 +184,11 @@ defmodule A2S do
   @rules_challenge_header ?V
   @rules_response_header ?E
 
-  ## Module API
-
   @doc """
   Returns the challenge request packet for the given query type.
   """
   @spec challenge_request(:info | :players | :rules) :: binary()
+
   def challenge_request(:info) do
     <<@simple_header, @info_request_header, "Source Engine Query\0">>
   end
@@ -202,38 +208,40 @@ defmodule A2S do
   end
 
   @doc """
-  Parses a challenge response payload. Some game servers don't implement the challenge flow and will
+  Parses a challenge response packet. Some game servers don't implement the challenge flow and will
   immediately respond with the requested data. In that case `:immediate` will be returned with the data.
 
   If the server returns data immediately, and that data is multipacket, `:multipacket` will be returned.
   """
+
   @spec parse_challenge(binary()) ::
           {:challenge, binary()}
-          | {:immediate, {:info, Info.t()} | {:players, Players.t()} | {:rules, Rules.t()}}
-          | {:multipacket, {MultiPacketHeader.t(), binary()}}
-          | {:error, {:unknown_packet_header, binary()} | :compression_not_supported}
+          | {:immediate, {:info, A2S.Info.t()}}
+          | {:immediate, {:players, A2S.Players.t()}}
+          | {:immediate, {:rules, A2S.Rules.t()}}
+          | {:multipacket, {A2S.MultiPacketHeader.t(), binary()}}
+          | {:error, A2S.ParseError.t()}
 
-  def parse_challenge(<<@simple_header, @challenge_response_header, challenge::binary>>) do
+  def parse_challenge(<<@simple_header, @challenge_response_header, challenge::bytes>>) do
     {:challenge, challenge}
   end
 
-  def parse_challenge(<<@simple_header, _::bytes>> = data) do
-    {:immediate, parse_response(data)}
-  end
-
-  def parse_challenge(<<@multipacket_header, _::bytes>> = data) do
-    {:immediate, parse_response(data)}
-  end
-
-  def parse_challenge(packet) when is_binary(packet) do
-    {:error, {:unknown_packet_header, packet}}
+  # reasonably clean wrapper around an ugly API
+  def parse_challenge(<<@simple_header, _::bytes>> = packet) do
+    case parse_response(packet) do
+      {:error, reason} -> {:error, reason}
+      {:multipacket, result} -> {:multipacket, result}
+      response -> {:immediate, response}
+    end
   end
 
   @spec parse_challenge!(binary()) ::
           {:challenge, binary()}
-          | {:immediate,
-             {:info, A2S.Info.t()} | {:players, A2S.Players.t()} | {:rules, A2S.Rules.t()}}
+          | {:immediate, {:info, A2S.Info.t()}}
+          | {:immediate, {:players, A2S.Players.t()}}
+          | {:immediate, {:rules, A2S.Rules.t()}}
           | {:multipacket, {A2S.MultiPacketHeader.t(), binary()}}
+
   def parse_challenge!(packet) do
     case parse_challenge(packet) do
       {:error, error} -> raise error
@@ -242,16 +250,17 @@ defmodule A2S do
   end
 
   @spec sign_challenge(:info | :players | :rules, challenge :: binary()) :: binary()
+
   def sign_challenge(:info, challenge) when is_binary(challenge) do
-    <<@simple_header, @info_request_header, "Source Engine Query\0", challenge::binary>>
+    <<@simple_header, @info_request_header, "Source Engine Query\0", challenge::bytes>>
   end
 
   def sign_challenge(:players, challenge) when is_binary(challenge) do
-    <<@simple_header, @player_request_header, challenge::binary>>
+    <<@simple_header, @player_request_header, challenge::bytes>>
   end
 
   def sign_challenge(:rules, challenge) when is_binary(challenge) do
-    <<@simple_header, @rules_challenge_header, challenge::binary>>
+    <<@simple_header, @rules_challenge_header, challenge::bytes>>
   end
 
   def sign_challenge(term, _challenge) when term not in @queries do
@@ -261,11 +270,11 @@ defmodule A2S do
   end
 
   @spec parse_response(binary()) ::
-          {:info, Info.t()}
-          | {:players, Player.t()}
-          | {:rules, Rules.t()}
-          | {:multipacket, {MultiPacketHeader.t(), binary()}}
-          | {:error, :compression_not_supported}
+          {:info, A2S.Info.t()}
+          | {:multipacket, {A2S.MultiPacketHeader.t(), binary()}}
+          | {:players, A2S.Players.t()}
+          | {:rules, A2S.Rules.t()}
+          | {:error, A2S.ParseError.t()}
 
   def parse_response(<<@simple_header, type_header::8, payload::bytes>> = data) do
     {query_type, parse_fn} =
@@ -273,6 +282,7 @@ defmodule A2S do
         @info_response_header -> {:info, &parse_info_payload/1}
         @player_response_header -> {:players, &parse_player_payload/1}
         @rules_response_header -> {:rules, &parse_rules_payload/1}
+        _ -> {:error, %A2S.ParseError{response_type: type_header, data: data}}
       end
 
     try do
@@ -284,17 +294,14 @@ defmodule A2S do
 
   def parse_response(<<@multipacket_header, payload::bytes>> = data) do
     try do
-      case parse_multipacket_part(payload) do
-        {:ok, part} -> {:multipacket, part}
-        {:error, reason} -> {:error, reason}
-      end
+      {:multipacket, parse_multipacket_part(payload)}
     rescue
       _ -> {:error, %A2S.ParseError{response_type: :multipacket_part, data: data}}
     end
   end
 
   def parse_response(packet) when is_binary(packet) do
-    {:error, {:unknown_packet_header, packet}}
+    {:error, %A2S.ParseError{response_type: :unknown, data: packet}}
   end
 
   @spec parse_response!(binary()) ::
@@ -310,15 +317,23 @@ defmodule A2S do
     end
   end
 
+  ## Multipacket handling
+
   @spec parse_multipacket_response(list({MultiPacketHeader.t(), binary()})) ::
           {:info, Info.t()}
           | {:players, Player.t()}
           | {:rules, Rules.t()}
-          | {:error, any}
+          | {:error, A2S.ParseError.t()}
+
   def parse_multipacket_response(packets) when is_list(packets) do
+    # read the first packet header
+    packets = sort_multipacket(packets)
+
+    [{%MultiPacketHeader{bzip?: bzip?}, _} | _] = packets
+
     packets
-    |> sort_multipacket()
     |> glue_packets()
+    |> (&if(bzip?, do: Bzip2.decompress!("BZh" <> &1), else: &1)).()
     |> parse_response()
   end
 
@@ -326,6 +341,7 @@ defmodule A2S do
           {:info, Info.t()}
           | {:players, Player.t()}
           | {:rules, Rules.t()}
+
   def parse_multipacket_response!(packets) when is_list(packets) do
     case parse_multipacket_response(packets) do
       {:error, reason} -> raise reason
@@ -333,10 +349,62 @@ defmodule A2S do
     end
   end
 
+  @spec parse_multipacket_part(packet :: binary()) :: {MultiPacketHeader.t(), binary()}
+
+  # first packet, check for compression
+  defp parse_multipacket_part(<<i::bits-40, 0::8, rest::bytes>>) do
+    import Bitwise, only: [&&&: 2]
+
+    <<id::signed-32-little, total::8>> = i
+
+    <<size::signed-16-little, rest::bytes>> = rest
+
+    bzip? = (id &&& 0x80000000) !== 0;
+
+    {_zip_size, _checksum, payload} =
+      if bzip? do
+        <<
+          zip_size::signed-32-little,
+          checksum::signed-32-little,
+          payload::bytes
+        >> = rest
+
+        {zip_size, checksum, payload}
+      else
+        {nil, nil, rest}
+      end
+
+    {%MultiPacketHeader{
+       id: id,
+       total: total,
+       index: 0,
+       bzip?: bzip?,
+       size: size
+     }, payload}
+  end
+
+  # other packets
+  defp parse_multipacket_part(<<i::bits-64, payload::bytes>>) do
+    <<
+      id::signed-32-little,
+      total::8,
+      index::8,
+      size::signed-16-little
+    >> = i
+
+    {%MultiPacketHeader{
+       id: id,
+       total: total,
+       index: index,
+       size: size
+     }, payload}
+  end
+
+  defp parse_multipacket_part(_), do: raise("bad multipacket part")
+
   ## A2S_INFO Parsing
 
-  @spec parse_info_payload(binary) :: Info.t()
-  def parse_info_payload(data) when is_binary(data) do
+  defp parse_info_payload(data) when is_binary(data) do
     <<protocol::8, data::bytes>> = data
 
     {name, data} = read_null_term_string(data)
@@ -465,11 +533,10 @@ defmodule A2S do
 
   ## A2S_PLAYER Parsing
 
-  @spec parse_player_payload(binary()) :: Players.t()
-  defp parse_player_payload(<<count::unsigned-8, data::bytes>>) do
+  defp parse_player_payload(<<count::8, rest::bytes>>) do
     %Players{
       count: count,
-      players: read_players(data)
+      players: read_players(rest)
     }
   end
 
@@ -478,7 +545,7 @@ defmodule A2S do
   defp read_players(<<>>, players), do: Enum.reverse(players)
 
   defp read_players(data, players) do
-    <<index::unsigned-8, data::bytes>> = data
+    <<index::8, data::bytes>> = data
     {name, data} = read_null_term_string(data)
     <<score::signed-32-little, data::bytes>> = data
     <<duration::float-32-little, data::bytes>> = data
@@ -495,7 +562,6 @@ defmodule A2S do
 
   ## A2S_RULES Parsing
 
-  @spec parse_rules_payload(payload :: binary()) :: Rules.t()
   defp parse_rules_payload(<<count::signed-16-little, data::bytes>>) do
     %Rules{
       count: count,
@@ -519,46 +585,13 @@ defmodule A2S do
     read_rules(data, [rule | rules])
   end
 
-  @spec parse_multipacket_part(packet :: binary()) ::
-          {:ok, {MultiPacketHeader.t(), binary()}}
-          | {:error, :compression_not_supported}
-
-  # compressed first packet (not supported) (upgrade this into an exception that provides a full explanation)
-  defp parse_multipacket_part(<<1::1-integer, _::bits>>) do
-    {:error, :compression_not_supported}
-  end
-
-  # first packet, uncompressed (supported)
-  defp parse_multipacket_part(<<
-         0::1-integer,
-         id::signed-31-little,
-         total::unsigned-8,
-         0::unsigned-8,
-         size::signed-16-little,
-         rest::bytes
-       >>) do
-    {:ok, {%MultiPacketHeader{id: id, total: total, index: 0, size: size}, rest}}
-  end
-
-  # other packets
-  defp parse_multipacket_part(<<
-         id::signed-32-little,
-         total::unsigned-8,
-         index::unsigned-8,
-         size::signed-16-little,
-         rest::bytes
-       >>) do
-    {:ok, {%MultiPacketHeader{id: id, total: total, index: index, size: size}, rest}}
-  end
-
-  defp parse_multipacket_part(_), do: raise("bad multipacket part")
-
   ## Helper functions
 
   # Accumulates bytes from data to the next null terminator returning the resulting string and remainder.
   defp read_null_term_string(data, str \\ [])
+
   defp read_null_term_string(<<0, rest::bytes>>, str) do
-    {str |> IO.iodata_to_binary |> String.replace_invalid(), rest}
+    {str |> IO.iodata_to_binary() |> String.replace_invalid(), rest}
   end
 
   defp read_null_term_string(<<char::8, rest::bytes>>, str) do
