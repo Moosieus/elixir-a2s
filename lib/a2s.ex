@@ -3,7 +3,7 @@ defmodule A2S.ParseError do
   # later. Can't do much to remediate invalid data and more defensive errors
   # could mislead here.
 
-  defexception response_type: nil, data: <<>>
+  defexception response_type: nil, data: <<>>, exception: nil
 
   def message(%__MODULE__{response_type: rt}) do
     "Invalid data in #{rt} response"
@@ -146,16 +146,14 @@ defmodule A2S do
       :id,
       :total,
       :index,
-      :size,
-      :bzip?
+      :size
     ]
 
     @type t :: %MultiPacketHeader{
             id: integer(),
             total: byte(),
             index: byte(),
-            size: integer(),
-            bzip?: boolean()
+            size: integer()
           }
   end
 
@@ -288,7 +286,7 @@ defmodule A2S do
     try do
       {query_type, parse_fn.(payload)}
     rescue
-      _ -> {:error, %A2S.ParseError{response_type: query_type, data: data}}
+      error -> {:error, %A2S.ParseError{response_type: query_type, data: data, exception: error}}
     end
   end
 
@@ -296,7 +294,7 @@ defmodule A2S do
     try do
       {:multipacket, parse_multipacket_part(payload)}
     rescue
-      _ -> {:error, %A2S.ParseError{response_type: :multipacket_part, data: data}}
+      error -> {:error, %A2S.ParseError{response_type: :multipacket_part, data: data, exception: error}}
     end
   end
 
@@ -329,11 +327,8 @@ defmodule A2S do
     # read the first packet header
     packets = sort_multipacket(packets)
 
-    [{%MultiPacketHeader{bzip?: bzip?}, _} | _] = packets
-
     packets
     |> glue_packets()
-    |> (&if(bzip?, do: Bzip2.decompress!("BZh" <> &1), else: &1)).()
     |> parse_response()
   end
 
@@ -357,28 +352,16 @@ defmodule A2S do
 
     <<id::signed-32-little, total::8>> = i
 
-    <<size::signed-16-little, rest::bytes>> = rest
+    <<size::signed-16-little, payload::bytes>> = rest
 
-    bzip? = (id &&& 0x80000000) !== 0;
+    compressed = (id &&& 0x80000000) !== 0
 
-    {_zip_size, _checksum, payload} =
-      if bzip? do
-        <<
-          zip_size::signed-32-little,
-          checksum::signed-32-little,
-          payload::bytes
-        >> = rest
-
-        {zip_size, checksum, payload}
-      else
-        {nil, nil, rest}
-      end
+    if compressed do raise "compression not supported" end
 
     {%MultiPacketHeader{
        id: id,
        total: total,
        index: 0,
-       bzip?: bzip?,
        size: size
      }, payload}
   end
