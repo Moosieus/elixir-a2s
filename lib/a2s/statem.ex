@@ -1,10 +1,8 @@
 defmodule A2S.Statem do
-  @moduledoc """
-  A state machine process responsible for handling all A2S queries to a game server running at the given address.
-  Queries must be performed sequentially per address as A2S provides no way to associate what replies associate to what responses.
-
-  Each instance should exit normally after a certain interval of inactivity (currently hard-coded to 2 minutes).
-  """
+  @moduledoc false
+  # A state machine process responsible for handling all A2S queries to a game server running at the given address.
+  # Queries must be performed sequentially per address as A2S provides no way to associate what replies associate to what responses.
+  # Each instance should exit normally after a certain interval of inactivity (currently hard-coded to 2 minutes).
 
   @behaviour :gen_statem
 
@@ -20,21 +18,21 @@ defmodule A2S.Statem do
 
   ## Initialization
 
-  @type init_args() :: {:inet.ip_address(), :inet.port_number()}
+  @type init_args() :: {{:inet.ip_address(), :inet.port_number()}, term()}
 
   @spec child_spec(init_args) :: Supervisor.child_spec()
-  def child_spec(address) do
+  def child_spec({address, registry}) do
     # need to revisit this child specification
     %{
       id: __MODULE__,
-      start: {__MODULE__, :start_link, [address]},
+      start: {__MODULE__, :start_link, [{address, registry}]},
       restart: :transient
     }
   end
 
   @spec start_link(init_args) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(address) do
-    :gen_statem.start_link(via_registry(address), __MODULE__, address, [])
+  def start_link({address, registry}) do
+    :gen_statem.start_link(via_registry(registry, address), __MODULE__, address, [])
   end
 
   @impl :gen_statem
@@ -42,14 +40,7 @@ defmodule A2S.Statem do
     {:ok, :idle, %Data{address: address}, idle_timeout()}
   end
 
-  ## Stopping
-
-  @spec stop({:inet.ip_address(), :inet.port_number()}, any) :: :ok
-  def stop(address, reason) do
-    :gen_statem.stop(via_registry(address), reason, :infinity)
-  end
-
-  defp via_registry(address), do: {:via, Registry, {:a2s_registry, address}}
+  defp via_registry(registry, address), do: {:via, Registry, {registry, address}}
 
   ## State Machine Callbacks
 
@@ -59,7 +50,7 @@ defmodule A2S.Statem do
   def handle_event({:call, from}, query, :idle, data) do
     %Data{address: address} = data
 
-    :ok = GenServer.call(A2S.UDP, {address, A2S.challenge_request(query)})
+    :ok = GenServer.call(A2S.Socket, {address, A2S.challenge_request(query)})
 
     {
       :next_state,
@@ -89,7 +80,7 @@ defmodule A2S.Statem do
         reply_and_next(msg, data)
 
       {:challenge, challenge} ->
-        :ok = GenServer.call(A2S.UDP, {address, A2S.sign_challenge(query, challenge)})
+        :ok = GenServer.call(A2S.Socket, {address, A2S.sign_challenge(query, challenge)})
         {:next_state, :await_response, data, recv_timeout()}
 
       {:multipacket, {header, _body} = part} ->

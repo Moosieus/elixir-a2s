@@ -61,11 +61,6 @@ defmodule A2S.MixProject do
           A2S.Player,
           A2S.Rule,
           A2S.MultiPacketHeader
-        ],
-        "Client Internals": [
-          A2S.DynamicSupervisor,
-          A2S.Statem,
-          A2S.UDP
         ]
       ],
       before_closing_head_tag: &before_closing_head_tag/1

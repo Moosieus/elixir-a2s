@@ -13,7 +13,7 @@ Each colored box is some internal action taken by your app. Each arrow represent
 *Given the A2S protocol's used by a tons of games in various states of implementation.* ([fullscreen](assets/how-it-actually-works.svg))
 ![How it actually works](assets/how-it-actually-works.svg)
 
-`A2S.Statem` may be of good reference for how to handle this in your own app.
+[`A2S.Statem`](https://github.com/Moosieus/elixir-a2s/blob/main/lib/a2s/statem.ex) may be of good reference for how to handle this in your own app.
 
 ## Other notes
 - `A2S.Client` is specifically optimized for querying numerous game servers on a frequent basis.

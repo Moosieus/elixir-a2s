@@ -1,4 +1,9 @@
 defmodule A2S.ParseError do
+  @moduledoc """
+  Struct representing an error encountered in parsing an A2S response.
+  """
+
+  # Internal Notes:
   # This is basically a log that says more than just (MatchError) to be repl'd
   # later. Can't do much to remediate invalid data and more defensive errors
   # could mislead here.
@@ -17,7 +22,7 @@ end
 
 defmodule A2S do
   @moduledoc """
-  A set of process-less functions for forming A2S challenges, requests, and parsing responses.
+  A collection of functions for forming A2S challenges, requests, and parsing responses.
   """
 
   ## Type Definitions
@@ -119,22 +124,7 @@ defmodule A2S do
 
     @type t :: %Rules{
             count: byte(),
-            rules: list(A2S.Rule.t())
-          }
-  end
-
-  defmodule Rule do
-    @moduledoc """
-    Struct representing a rule in an [A2S_RULES](https://developer.valvesoftware.com/wiki/Server_queries#Response_Format_3) response.
-    """
-    defstruct [
-      :name,
-      :value
-    ]
-
-    @type t :: %Rule{
-            name: String.t(),
-            value: String.t()
+            rules: list({String.t(), String.t()})
           }
   end
 
@@ -561,12 +551,7 @@ defmodule A2S do
     {name, data} = read_null_term_string(data)
     {value, data} = read_null_term_string(data)
 
-    rule = %Rule{
-      name: name,
-      value: value
-    }
-
-    read_rules(data, [rule | rules])
+    read_rules(data, [{name, value} | rules])
   end
 
   ## Helper functions

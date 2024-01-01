@@ -18,58 +18,48 @@ Documentation is available on [HexDocs](https://hexdocs.pm/elixir_a2s/readme.htm
 There's two general ways to use this library:
 
 ### Via `A2S.Client`
-An easy to use client that should cover most use-cases. Add `A2S.Client` to your app's supervision tree:
+An easy to use client that should cover most use cases.
+
+Add `A2S.Client` to your app's supervision tree:
 ```elixir
 children = [
-  {A2S.Client, [name: MyA2SCli]}
+  {A2S.Client, []}
 ]
 ```
 Or start the client dynamically: 
 ```elixir
-A2S.Client.start_link([name: MyA2SCli])
+A2S.Client.start_link()
 ```
 
-Afterwards querying a game server's as simple as:
+Afterwards, querying a game server's as simple as:
 ```elixir
-A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by port
+A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by the query port
 ```
+
+#### Usage Notes
+`A2S.Client` assumes a singleton pattern by default.
+
+For configuring multiple instances, see `A2S.Client.start_link/1` and `A2S.Client.query/3`.
 
 ### Via `A2S`
-This module provides the means form requests, sign challenges, and parse responses for the A2S protocol. You can utilize this module directly in your application for tighter integration, but in turn you'll have to handle the networking or handshaking necessary to execute A2S queries.
+This module provides functions form requests, sign challenges, and parse responses for the A2S protocol. You can utilize this module directly in your application for tighter integration, but in turn you'll have to roll your own packet assembly. See [Using A2S Directly](pages/using-a2s-directly.md) guide for further details.
 
-See [Using A2S Directly](pages/using-a2s-directly.md) guide for further details.
+## Unsupported games and features
 
-## Configuration
-The following configuration options are available for `A2S.Client`:
+#### [Source 2006](https://en.wikipedia.org/wiki/Source_(game_engine)#Source_2006) (aka "Pre-Orange Box") servers
+Most source games are running on newer versions of the engine.
 
-`:name` - Required, used as the `name` of the top-level supervisor for `A2S.Client`
-
-`:port` - Port on which to open the UDP socket for communicating with game servers. Defaults to `20850`.
-
-`:idle_timeout` - Under the hood, `A2S.Client` spins up one `:gen_statem` processes per address queried. These serve two purposes - to handle all the hand-shaking and packet wrangling necessary to complete A2S queries, and to ensure queries are executed sequentially. After an address hasn't been queried for an extended period, these processes should terminate to free their memory. Defaults to `120_000` (2 minutes, expressed in milliseconds).
-
-`:recv_timeout` - Deadline to receive a response packet for each packet sent in the query sequence. Defaults to `3000` (3 seconds, expressed in milliseconds).
-
-## Unsupported Games/Features
-The features and game servers listed below are unsupported due to disuse and to favor maintainability.
-
-#### [Source 2006](https://en.wikipedia.org/wiki/Source_(game_engine)#Source_2006) / "Pre-Orange Box" servers
-Would require supporting compression in multipacket responses. Not only adds code complexity, but would require users to have bzip2 installed.
-
-#### Other game servers utilizing multi-packet compression
-(see above)
-
-#### GoldSrc Servers not using the standard protocol
-Should impact exceedingly few applications as many GoldSrc servers use the current standard anyway.
+#### GoldSrc servers not using the standard protocol
+Many GoldSrc servers use the current standard, so this should impact few games.
 
 #### [The Ship](https://steamcharts.com/app/2400)
-Uses proprietary fields only worth supporting out of posterity-sake.
+Uses proprietary fields only worth supporting for posterity-sake.
 
 #### [A2A_PING](https://developer.valvesoftware.com/wiki/Server_queries#A2A_PING)
-Considered deprecated by Valve and is unsupported by many if not almost all most engines.
+Considered deprecated by Valve and is unsupported by almost all most games.
 
 #### [A2S_SERVERQUERY_GETCHALLENGE](https://developer.valvesoftware.com/wiki/Server_queries#A2S_SERVERQUERY_GETCHALLENGE)
-Only used by a handful of niche games. Normal challenge flow should work anyway.
+Only used by a handful of niche games, and the normal challenge flow should work anyway.
 
 ## Debugging
 `A2S.Client` uses Erlang's [gen_statem](https://www.erlang.org/doc/man/gen_statem.html) behavior to function and therefore requires the following `Logger` configuration to report exceptions and crashes:

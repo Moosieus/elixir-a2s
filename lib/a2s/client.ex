@@ -1,82 +1,124 @@
 defmodule A2S.Client do
   @moduledoc """
-  An easy to use client that performs the handshaking and busy-work necessary to make execute A2S queries.
+  An easy to use client that performs the packet assembly necessary to execute A2S queries.
 
   This client handles requests concurrently and should be suitable for most general uses.
 
-  Note: must supply a :name
+  Note: must supply a `:name`.
   """
 
   use Supervisor
 
-  ## API
+  @default_name A2S_Singleton
 
-  def start_link(opts) do
-    name = a2s_name!(opts)
-    port = Keyword.get(opts, :port, 20850)
-    idle_timeout = Keyword.get(opts, :idle_timeout, 120_000)
-    recv_timeout = Keyword.get(opts, :recv_timeout, 3000)
-
-    config = %{
-      port: port,
-      idle_timeout: idle_timeout,
-      recv_timeout: recv_timeout
-    }
-
-    Supervisor.start_link(__MODULE__, config, name: supervisor_name(name))
+  defmodule Config do
+    @moduledoc false
+    defstruct [:registry_name, :dynamic_supervisor_name, :socket_name, :port, :idle_timeout, :recv_timeout]
   end
+
+  ## Initialization
 
   def child_spec(opts) do
     %{
-      id: a2s_name!(opts),
+      id: a2s_name(opts),
       start: {__MODULE__, :start_link, [opts]}
     }
   end
 
   @doc """
-  Query a game server running at `address` for the data specified by `query`.
+  The following configuration options are available:
+
+  * `:name` - Alias of the top-level supervisor. Can be provided if you intend to run multiple client instances. Defaults to `#{inspect(@default_name)}`.
+
+  * `:port` - UDP socket port used for querying game servers. Defaults to `20850`.
+
+  * `:idle_timeout` - `A2S.Client` internally allocates a `:gen_statem` for each address queried, that should exit after idling to keep from leaking resources. Defaults to `120_000` or 2 minutes.
+
+  * `:recv_timeout` - Timeout the `:gen_statem`'s will wait between receiving individual packets before returning `{:error, :recv_timeout}`. Defaults to `3000` or 3 seconds.
   """
-  @spec query(:info | :players | :rules, {:inet.ip_address(), :inet.port_number()}, timeout) ::
-          {:info, A2S.Info.t()}
-          | {:players | A2S.Players.t()}
-          | {:rules | A2S.Rules.t()}
-          | {:error, any}
-  def query(query, address, timeout \\ 5000) do
-    :gen_statem.call(find_or_start(address), query, timeout)
+  @spec start_link(keyword()) :: :ignore | {:error, any()} | {:ok, pid()}
+  def start_link(opts \\ []) do
+    name = a2s_name(opts)
+
+    config = %Config{
+      registry_name: registry_name(name),
+      dynamic_supervisor_name: dynamic_supervisor_name(name),
+      socket_name: socket_name(name),
+      port: Keyword.get(opts, :port, 20850),
+      idle_timeout: Keyword.get(opts, :idle_timeout, 120_000),
+      recv_timeout: Keyword.get(opts, :recv_timeout, 3000)
+    }
+
+    Supervisor.start_link(__MODULE__, config, name: supervisor_name(name))
   end
 
-  ## CALLBACKS
+  defp a2s_name(opts), do: Keyword.get(opts, :name, @default_name)
+
+  @doc false
+  def registry_name(name), do: :"#{name}.Registry"
+
+  @doc false
+  def dynamic_supervisor_name(name), do: :"#{name}.DynamicSupervisor"
+
+  @doc false
+  def socket_name(name), do: :"#{name}.Socket"
+
+  @doc false
+  def supervisor_name(name), do: :"#{name}.Supervisor"
 
   @impl true
-  def init(config) do
+  def init(%Config{} = config) do
     :persistent_term.put({A2S.Statem, :recv_timeout}, config.recv_timeout)
     :persistent_term.put({A2S.Statem, :idle_timeout}, config.idle_timeout)
 
+    IO.inspect(config.registry_name, label: "registry name")
+    IO.inspect(config.dynamic_supervisor_name, label: "dynamic supervisor")
+
     children = [
-      {Registry, [keys: :unique, name: :a2s_registry]},
-      {A2S.DynamicSupervisor, []},
-      {A2S.UDP, [port: config.port]}
+      {Registry, [keys: :unique, name: config.registry_name]},
+      {A2S.DynamicSupervisor, [name: config.dynamic_supervisor_name]},
+      {A2S.Socket, [name: config.socket_name, port: config.port, a2s_registry: config.registry_name]}
     ]
 
     Supervisor.init(children, strategy: :one_for_all)
   end
 
-  ## FUNCTIONS
+  ## API
 
-  defp a2s_name!(opts) do
-    Keyword.get(opts, :name) || raise(ArgumentError, "must supply a name")
+  @doc """
+  Query a game server running at `address` for the data specified by `query`.
+
+  Additional options are available as a keyword list:
+  * `:name` - Alias of the top-level supervisor. Defaults to `A2S.Client`.
+
+  * `:timeout` - Absolute timeout for the request to complete. Defaults to `5000` or 5 seconds.
+  """
+  @spec query(
+          :info | :players | :rules,
+          {:inet.ip_address(), :inet.port_number()},
+          list({atom(), any()})
+        ) ::
+          {:info, A2S.Info.t()}
+          | {:players | A2S.Players.t()}
+          | {:rules | A2S.Rules.t()}
+          | {:error, any}
+
+  def query(query, address, opts \\ []) do
+    client_name = Keyword.get(opts, :name, @default_name)
+    timeout = Keyword.get(opts, :timeout, 5000)
+
+    :gen_statem.call(find_or_start(address, client_name), query, timeout)
   end
 
-  defp supervisor_name(name), do: :"#{name}.Supervisor"
+  defp find_or_start(address, client) do
+    registry = registry_name(client)
 
-  @spec find_or_start({:inet.ip_address(), :inet.port_number()}) :: pid
-  defp find_or_start(address) do
-    case Registry.lookup(:a2s_registry, address) do
+    case Registry.lookup(registry, address) do
       [{pid, _value}] ->
         pid
 
       [] ->
-        case A2S.DynamicSupervisor.start_child(address) do
+        case A2S.DynamicSupervisor.start_child(address, client) do
           {:ok, pid} -> pid
           {:ok, pid, _info} -> pid
           {:error, {:already_started, pid}} -> pid
