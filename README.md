@@ -36,10 +36,10 @@ Afterwards, querying a game server's as simple as:
 A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by the query port
 ```
 
-#### Usage Notes
-`A2S.Client` assumes a singleton pattern by default.
+#### Notes:
+* `A2S.Client` assumes a singleton pattern by default.
 
-For configuring multiple instances, see `A2S.Client.start_link/1` and `A2S.Client.query/3`.
+* For configuring multiple instances, see `A2S.Client.start_link/1` and `A2S.Client.query/3`.
 
 ### Via `A2S`
 This module provides functions form requests, sign challenges, and parse responses for the A2S protocol. You can utilize this module directly in your application for tighter integration, but in turn you'll have to roll your own packet assembly. See [Using A2S Directly](pages/using-a2s-directly.md) guide for further details.
