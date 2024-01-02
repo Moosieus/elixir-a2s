@@ -13,7 +13,7 @@ defmodule A2S.Client do
 
   defmodule Config do
     @moduledoc false
-    defstruct [:registry_name, :dynamic_supervisor_name, :socket_name, :port, :idle_timeout, :recv_timeout]
+    defstruct [:name, :port, :idle_timeout, :recv_timeout]
   end
 
   ## Initialization
@@ -41,9 +41,7 @@ defmodule A2S.Client do
     name = a2s_name(opts)
 
     config = %Config{
-      registry_name: registry_name(name),
-      dynamic_supervisor_name: dynamic_supervisor_name(name),
-      socket_name: socket_name(name),
+      name: name,
       port: Keyword.get(opts, :port, 20850),
       idle_timeout: Keyword.get(opts, :idle_timeout, 120_000),
       recv_timeout: Keyword.get(opts, :recv_timeout, 3000)
@@ -54,30 +52,22 @@ defmodule A2S.Client do
 
   defp a2s_name(opts), do: Keyword.get(opts, :name, @default_name)
 
-  @doc false
-  def registry_name(name), do: :"#{name}.Registry"
-
-  @doc false
-  def dynamic_supervisor_name(name), do: :"#{name}.DynamicSupervisor"
-
-  @doc false
-  def socket_name(name), do: :"#{name}.Socket"
-
-  @doc false
-  def supervisor_name(name), do: :"#{name}.Supervisor"
-
   @impl true
   def init(%Config{} = config) do
-    :persistent_term.put({A2S.Statem, :recv_timeout}, config.recv_timeout)
-    :persistent_term.put({A2S.Statem, :idle_timeout}, config.idle_timeout)
+    %Config{
+      name: name,
+      port: port,
+      idle_timeout: idle_timeout,
+      recv_timeout: recv_timeout
+    } = config
 
-    IO.inspect(config.registry_name, label: "registry name")
-    IO.inspect(config.dynamic_supervisor_name, label: "dynamic supervisor")
+    :persistent_term.put({A2S.Statem, :recv_timeout}, recv_timeout)
+    :persistent_term.put({A2S.Statem, :idle_timeout}, idle_timeout)
 
     children = [
-      {Registry, [keys: :unique, name: config.registry_name]},
-      {A2S.DynamicSupervisor, [name: config.dynamic_supervisor_name]},
-      {A2S.Socket, [name: config.socket_name, port: config.port, a2s_registry: config.registry_name]}
+      {Registry, [keys: :unique, name: registry_name(name)]},
+      {A2S.DynamicSupervisor, [name: dynamic_supervisor_name(name)]},
+      {A2S.Socket, [name: socket_name(name), port: port, a2s_registry: registry_name(name)]}
     ]
 
     Supervisor.init(children, strategy: :one_for_all)
@@ -125,4 +115,18 @@ defmodule A2S.Client do
         end
     end
   end
+
+  ## Helpers
+
+  @doc false
+  def registry_name(name), do: :"#{name}.Registry"
+
+  @doc false
+  def dynamic_supervisor_name(name), do: :"#{name}.DynamicSupervisor"
+
+  @doc false
+  def socket_name(name), do: :"#{name}.Socket"
+
+  @doc false
+  def supervisor_name(name), do: :"#{name}.Supervisor"
 end

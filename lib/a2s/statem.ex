@@ -13,7 +13,7 @@ defmodule A2S.Statem do
 
   defmodule Data do
     @moduledoc false
-    defstruct [:address, :caller, :query, :total, :parts]
+    defstruct [:address, :caller, :query, :total, :parts, :socket]
   end
 
   ## Initialization
@@ -21,23 +21,26 @@ defmodule A2S.Statem do
   @type init_args() :: {{:inet.ip_address(), :inet.port_number()}, term()}
 
   @spec child_spec(init_args) :: Supervisor.child_spec()
-  def child_spec({address, registry}) do
+  def child_spec({address, client}) do
     # need to revisit this child specification
     %{
       id: __MODULE__,
-      start: {__MODULE__, :start_link, [{address, registry}]},
+      start: {__MODULE__, :start_link, [{address, client}]},
       restart: :transient
     }
   end
 
   @spec start_link(init_args) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link({address, registry}) do
-    :gen_statem.start_link(via_registry(registry, address), __MODULE__, address, [])
+  def start_link({address, client}) do
+    registry = A2S.Client.registry_name(client)
+    socket = A2S.Client.socket_name(client)
+
+    :gen_statem.start_link(via_registry(registry, address), __MODULE__, {address, socket}, [])
   end
 
   @impl :gen_statem
-  def init(address) do
-    {:ok, :idle, %Data{address: address}, idle_timeout()}
+  def init({address, socket}) do
+    {:ok, :idle, %Data{address: address, socket: socket}, idle_timeout()}
   end
 
   defp via_registry(registry, address), do: {:via, Registry, {registry, address}}
@@ -48,9 +51,9 @@ defmodule A2S.Statem do
 
   @impl :gen_statem
   def handle_event({:call, from}, query, :idle, data) do
-    %Data{address: address} = data
+    %Data{address: address, socket: socket} = data
 
-    :ok = GenServer.call(A2S.Socket, {address, A2S.challenge_request(query)})
+    :ok = GenServer.call(socket, {address, A2S.challenge_request(query)})
 
     {
       :next_state,
@@ -72,7 +75,8 @@ defmodule A2S.Statem do
   def handle_event(:cast, packet, :await_challenge, data) do
     %Data{
       address: address,
-      query: query
+      query: query,
+      socket: socket
     } = data
 
     case A2S.parse_challenge(packet) do
@@ -80,7 +84,7 @@ defmodule A2S.Statem do
         reply_and_next(msg, data)
 
       {:challenge, challenge} ->
-        :ok = GenServer.call(A2S.Socket, {address, A2S.sign_challenge(query, challenge)})
+        :ok = GenServer.call(socket, {address, A2S.sign_challenge(query, challenge)})
         {:next_state, :await_response, data, recv_timeout()}
 
       {:multipacket, {header, _body} = part} ->

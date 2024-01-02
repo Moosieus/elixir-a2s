@@ -17,7 +17,7 @@ Documentation is available on [HexDocs](https://hexdocs.pm/elixir_a2s/readme.htm
 ## Usage
 There's two general ways to use this library:
 
-### Via `A2S.Client`
+### `A2S.Client`
 An easy to use client that should cover most use cases.
 
 Add `A2S.Client` to your app's supervision tree:
@@ -41,7 +41,7 @@ A2S.Client.query(:info, {{127, 0, 0, 1}, 20000}) # ipv4 address followed by the 
 
 * For configuring multiple instances, see `A2S.Client.start_link/1` and `A2S.Client.query/3`.
 
-### Via `A2S`
+### `A2S`
 This module provides functions form requests, sign challenges, and parse responses for the A2S protocol. You can utilize this module directly in your application for tighter integration, but in turn you'll have to roll your own packet assembly. See [Using A2S Directly](pages/using-a2s-directly.md) guide for further details.
 
 ## Unsupported games and features
@@ -62,15 +62,7 @@ Considered deprecated by Valve and is unsupported by almost all most games.
 Only used by a handful of niche games, and the normal challenge flow should work anyway.
 
 ## Debugging
-`A2S.Client` uses Erlang's [gen_statem](https://www.erlang.org/doc/man/gen_statem.html) behavior to function and therefore requires the following `Logger` configuration to report exceptions and crashes:
-
+By default [Elixir will ignore `:gen_statem` crashes](https://elixirforum.com/t/why-does-logger-translator-ignore-gen-statem-reports/37418). To receive them, add the following to your application:
 ```elixir
-config :logger,
-  handle_otp_reports: true,
-  handle_sasl_reports: true
-```
-or in a REPL:
-```elixir
-Logger.configure(handle_otp_reports: true)
-Logger.configure(handle_sasl_reports: true)
+Logger.add_translator({A2S.StateMachineTranslator, :translate})
 ```
