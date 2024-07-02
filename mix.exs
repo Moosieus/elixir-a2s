@@ -1,7 +1,7 @@
 defmodule A2S.MixProject do
   use Mix.Project
 
-  @version "0.4.1"
+  @version "0.4.2"
   @source_url "https://github.com/Moosieus/elixir-a2s"
 
   def project do

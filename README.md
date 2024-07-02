@@ -7,7 +7,7 @@ Add `:elixir_a2s` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:elixir_a2s, "~> 0.4.1"}
+    {:elixir_a2s, "~> 0.4.2"}
   ]
 end
 ```
