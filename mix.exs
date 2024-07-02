@@ -39,12 +39,16 @@ defmodule A2S.MixProject do
       source_url: @source_url,
       extras: [
         "README.md",
-        "pages/using-a2s-directly.md"
+        "pages/using-a2s-directly.md",
+        "notebooks/passive_example.livemd"
       ],
       assets: %{"pages/assets" => "assets"},
       groups_for_extras: [
         Guides: [
           "pages/using-a2s-directly.md"
+        ],
+        Livebooks: [
+          "notebooks/passive_example.livemd"
         ]
       ],
       groups_for_modules: [

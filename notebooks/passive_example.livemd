@@ -1,8 +1,8 @@
-# Active Mode Example
+# Passive Mode Example
 
 ## Setup
 
-This LiveBook demonstrates the minimal viable code to
+This LiveBook demonstrates the minimal viable code to query a game server using `:gen_udp` in passive mode and the `A2S` module.
 
 ```elixir
 Mix.install(
@@ -12,16 +12,11 @@ Mix.install(
   lockfile: :elixir_a2s
 )
 
-defmodule ParseIP do
-  @doc """
-  Converts a charlist to an {ip, port} tuple as specified by :gen_udp
-  """
-  def parse(addr) when is_list(addr) do
-    [rest, port] = :string.split(addr, ~c":")
-    {:ok, ip} = :inet.parse_ipv4_address(rest)
-    {port, []} = :string.to_integer(port)
-    {ip, port}
-  end
+parse_ip = fn addr when is_list(addr) ->
+  [rest, port] = :string.split(addr, ~c":")
+  {:ok, ip} = :inet.parse_ipv4_address(rest)
+  {port, []} = :string.to_integer(port)
+  {ip, port}
 end
 ```
 
@@ -36,7 +31,7 @@ timeout = 3000
 # udp port (probably dont need to change this)
 source_port = 20850
 
-address = ParseIP.parse(game_server)
+address = parse_ip.(game_server)
 ```
 
 ## Query the server
