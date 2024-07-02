@@ -41,9 +41,7 @@ defmodule A2S.MixProject do
         "README.md",
         "pages/using-a2s-directly.md"
       ],
-      assets: [
-        "pages/assets"
-      ],
+      assets: %{"pages/assets" => "assets"},
       groups_for_extras: [
         Guides: [
           "pages/using-a2s-directly.md"
