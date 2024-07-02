@@ -1,7 +1,7 @@
 defmodule A2S.MixProject do
   use Mix.Project
 
-  @version "0.4.0"
+  @version "0.4.1"
   @source_url "https://github.com/Moosieus/elixir-a2s"
 
   def project do
@@ -27,7 +27,7 @@ defmodule A2S.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, "~> 0.30.5", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.34.1", only: :dev, runtime: false}
     ]
   end
 
