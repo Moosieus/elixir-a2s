@@ -152,13 +152,13 @@ defmodule A2S.Statem do
     reply_and_next({:error, :recv_timeout}, data)
   end
 
-  defp reply_and_next(msg, %Data{address: address, caller: caller}) do
+  defp reply_and_next(msg, %Data{address: address, caller: caller, socket: socket}) do
     :gen_statem.reply(caller, msg)
 
     {
       :next_state,
       :idle,
-      %Data{address: address}
+      %Data{address: address, socket: socket}
     }
   end
 
