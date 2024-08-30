@@ -89,8 +89,8 @@ defmodule A2S.Client do
           list({atom(), any()})
         ) ::
           {:info, A2S.Info.t()}
-          | {:players | A2S.Players.t()}
-          | {:rules | A2S.Rules.t()}
+          | {:players, A2S.Players.t()}
+          | {:rules, A2S.Rules.t()}
           | {:error, any}
 
   def query(query, address, opts \\ []) do
