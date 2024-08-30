@@ -158,8 +158,7 @@ defmodule A2S.Statem do
     {
       :next_state,
       :idle,
-      %Data{address: address},
-      recv_timeout()
+      %Data{address: address}
     }
   end
 
